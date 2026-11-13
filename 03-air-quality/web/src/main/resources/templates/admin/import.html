@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('CSV 일괄 등록')}"></head>
+<body>
+<nav th:replace="~{fragments :: nav}"></nav>
+<main class="container" style="max-width: 760px">
+    <div th:replace="~{fragments :: alerts}"></div>
+    <h1 class="mb-3">측정 데이터 CSV 일괄 등록</h1>
+
+    <div class="card p-4 mb-3">
+        <p class="mb-2">첫 줄은 아래 헤더여야 합니다 (UTF-8, 쉼표 구분). 행마다 저장 후 다음날 예측까지 자동 실행됩니다.</p>
+        <pre class="bg-light p-2 small mb-2" th:text="${columns}"></pre>
+        <a class="small" th:href="@{/sample/measurements_60days.csv}" download>샘플 CSV 내려받기 (60일, 합성 데이터)</a>
+    </div>
+
+    <form class="card p-4" th:action="@{/admin/import}" method="post" enctype="multipart/form-data">
+        <div class="mb-3">
+            <label class="form-label">측정소</label>
+            <select name="stationId" class="form-select" required>
+                <option th:each="s : ${stations}" th:value="${s.id}" th:text="|${s.region} ${s.name}|"></option>
+            </select>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">CSV 파일</label>
+            <input type="file" name="file" accept=".csv" class="form-control" required>
+        </div>
+        <button class="btn btn-primary">업로드 및 예측</button>
+    </form>
+
+    <div th:if="${result != null and !result.errors().isEmpty()}" class="card p-3 mt-3">
+        <h6 class="text-danger">실패한 행 (최대 20개 표시)</h6>
+        <ul class="small mb-0"><li th:each="e : ${result.errors()}" th:text="${e}"></li></ul>
+    </div>
+</main>
+<footer th:replace="~{fragments :: footer}"></footer>
+</body>
+</html>

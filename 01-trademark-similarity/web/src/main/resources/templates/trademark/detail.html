@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{fragments :: head(${trademark.name})}"></head>
+<body>
+<nav th:replace="~{fragments :: nav}"></nav>
+<main class="container">
+    <div th:replace="~{fragments :: alerts}"></div>
+
+    <div class="card p-4 mb-4">
+        <div class="row g-4">
+            <div class="col-md-4">
+                <img class="thumb border rounded" th:src="@{'/uploads/' + ${trademark.imagePath}}"
+                     th:alt="${trademark.name}">
+            </div>
+            <div class="col-md-8">
+                <h1 th:text="${trademark.name}">상표명</h1>
+                <table class="table table-sm mt-3">
+                    <tr><th style="width: 140px">출원번호</th><td th:text="${trademark.applicationNo}"></td></tr>
+                    <tr><th>출원인</th><td th:text="${trademark.applicant} ?: '-'"></td></tr>
+                    <tr><th>상품분류</th>
+                        <td th:text="${trademark.niceClass != null} ? |제${trademark.niceClass}류| : '-'"></td></tr>
+                    <tr><th>설명</th><td th:text="${trademark.description} ?: '-'"></td></tr>
+                    <tr><th>특징 벡터</th>
+                        <td>
+                            <span th:if="${trademark.hasVector()}"
+                                  th:text="|${trademark.modelName} · ${trademark.vectorDim}차원|"></span>
+                            <span th:unless="${trademark.hasVector()}" class="badge bg-warning text-dark">없음</span>
+                        </td></tr>
+                    <tr><th>등록일시</th>
+                        <td th:text="${#temporals.format(trademark.createdAt, 'yyyy-MM-dd HH:mm')}"></td></tr>
+                </table>
+                <div class="d-flex gap-2" sec:authorize="isAuthenticated()">
+                    <a class="btn btn-outline-primary btn-sm"
+                       th:href="@{/trademarks/{id}/edit(id=${trademark.id})}">수정</a>
+                    <form th:action="@{/trademarks/{id}/delete(id=${trademark.id})}" method="post"
+                          onsubmit="return confirm('삭제하시겠습니까?')">
+                        <button class="btn btn-outline-danger btn-sm">삭제</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <h5 class="mb-3">이 상표와 비슷한 등록 상표</h5>
+    <div th:if="${recommendations.isEmpty()}" class="alert alert-light">추천할 상표가 없습니다.</div>
+    <div class="row row-cols-2 row-cols-md-3 row-cols-lg-6 g-3">
+        <div class="col" th:each="item : ${recommendations}">
+            <a class="card h-100 text-decoration-none text-dark position-relative"
+               th:href="@{/trademarks/{id}(id=${item.trademarkId()})}">
+                <span class="badge bg-dark rank-badge" th:text="${item.rank()}">1</span>
+                <img class="thumb" th:src="@{'/uploads/' + ${item.trademark().imagePath}}" alt="">
+                <div class="card-body p-2">
+                    <div class="fw-semibold text-truncate" th:text="${item.trademark().name}"></div>
+                    <span class="badge" th:classappend="'bg-' + ${item.levelColor()}"
+                          th:text="|${item.percent()}% · ${item.level()}|"></span>
+                </div>
+            </a>
+        </div>
+    </div>
+</main>
+<footer th:replace="~{fragments :: footer}"></footer>
+</body>
+</html>

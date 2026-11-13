@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security" lang="ko">
+<head th:replace="~{fragments :: head('개요')}"></head>
+<body>
+<nav th:replace="~{fragments :: nav}"></nav>
+<main class="container">
+
+    <!-- 로그인한 상담자: 선별 현황 -->
+    <th:block sec:authorize="isAuthenticated()">
+        <div class="title-row">
+            <div>
+                <h1>선별 현황</h1>
+                <p th:if="${total > 0}"
+                   th:text="${dist['고위험'] > 0} ? |고위험 ${dist['고위험']}명은 정신건강 전문가 연계를 검토해야 합니다.| : '고위험으로 예측된 대상자가 없습니다.'">요약</p>
+                <p th:if="${total == 0}">아직 평가가 없습니다. 첫 설문을 등록하면 이곳에 현황이 쌓입니다.</p>
+            </div>
+            <span class="stamp" th:text="|최근 7일 ${thisWeek}건 · 누적 ${total}건|">최근 7일</span>
+        </div>
+
+        <div class="ov">
+            <section class="panel span-8" aria-labelledby="h-ladder">
+                <div class="panel-head"><h2 id="h-ladder">스트레스 수준 분포</h2><a th:href="@{/assessments}">평가 이력</a></div>
+                <div class="ladder-figure">
+                    <strong class="num" th:text="${avgRisk != null} ? ${#numbers.formatDecimal(avgRisk, 1, 1)} : '—'">—</strong>
+                    <span>평균 위험점수 (0~100)</span>
+                </div>
+                <div class="ladder" role="img"
+                     th:attr="aria-label=|정상 ${dist['정상']}명, 주의 ${dist['주의']}명, 고위험 ${dist['고위험']}명|">
+                    <th:block th:if="${total > 0}">
+                        <i class="l0" th:style="|width: ${dist['정상'] * 100.0 / total}%|"></i>
+                        <i class="l1" th:style="|width: ${dist['주의'] * 100.0 / total}%|"></i>
+                        <i class="l2" th:style="|width: ${dist['고위험'] * 100.0 / total}%|"></i>
+                    </th:block>
+                </div>
+                <dl class="ladder-legend">
+                    <div style="--c: var(--accent-mid)"><dt>정상</dt>
+                        <dd><span class="num" th:text="${dist['정상']}">0</span><small th:text="${total > 0} ? |${#numbers.formatDecimal(dist['정상'] * 100.0 / total, 1, 0)}%| : '—'">—</small></dd></div>
+                    <div style="--c: var(--accent)"><dt>주의</dt>
+                        <dd><span class="num" th:text="${dist['주의']}">0</span><small th:text="${total > 0} ? |${#numbers.formatDecimal(dist['주의'] * 100.0 / total, 1, 0)}%| : '—'">—</small></dd></div>
+                    <div style="--c: var(--negative)"><dt>고위험</dt>
+                        <dd><span class="num" th:text="${dist['고위험']}">0</span><small th:text="${total > 0} ? |${#numbers.formatDecimal(dist['고위험'] * 100.0 / total, 1, 0)}%| : '—'">—</small></dd></div>
+                </dl>
+            </section>
+
+            <section class="panel span-4" aria-labelledby="h-high">
+                <div class="panel-head"><h2 id="h-high">연계 검토 대상</h2>
+                    <a th:href="@{/assessments(level=2)}">고위험 전체</a></div>
+                <ul class="list" th:unless="${highRisk.isEmpty()}">
+                    <li th:each="a : ${highRisk}">
+                        <span><a th:href="@{/assessments/{id}(id=${a.id})}" th:text="${a.respondentCode}">P-0001</a>
+                            <span class="sub d-block" th:text="${#temporals.format(a.createdAt, 'MM-dd HH:mm')}">날짜</span></span>
+                        <span></span>
+                        <span class="score num" th:text="${a.riskScore != null} ? ${#numbers.formatDecimal(a.riskScore, 1, 1)} : '—'">—</span>
+                    </li>
+                </ul>
+                <p class="empty" th:if="${highRisk.isEmpty()}">고위험으로 예측된 대상자가 없습니다.</p>
+            </section>
+
+            <section class="panel span-8" aria-labelledby="h-recent">
+                <div class="panel-head"><h2 id="h-recent">최근 평가</h2><a th:href="@{/assessments}" th:text="|전체 ${total}건|">전체</a></div>
+                <ul class="list" th:unless="${recent.isEmpty()}">
+                    <li th:each="a : ${recent}">
+                        <span><a th:href="@{/assessments/{id}(id=${a.id})}" th:text="${a.respondentCode}">P-0001</a>
+                            <span class="sub d-block" th:text="|${a.parentAge}세 · 자녀 ${a.childCount}명 · ${#temporals.format(a.createdAt, 'MM-dd HH:mm')}|">정보</span></span>
+                        <span class="badge" th:classappend="'bg-' + ${a.levelColor()}" th:text="${a.stressLabel ?: '예측 전'}">정상</span>
+                        <span class="score num" th:text="${a.riskScore != null} ? ${#numbers.formatDecimal(a.riskScore, 1, 1)} : '—'">—</span>
+                    </li>
+                </ul>
+                <p class="empty" th:if="${recent.isEmpty()}">아직 평가가 없습니다. <a th:href="@{/assessments/new}">첫 설문 등록</a></p>
+            </section>
+
+            <section class="panel span-4" aria-labelledby="h-model">
+                <div class="panel-head"><h2 id="h-model">예측 모델</h2>
+                    <span class="badge" th:classappend="${ai['status'] == 'UP'} ? 'bg-success' : 'bg-danger'" th:text="${ai['status'] == 'UP'} ? '정상' : '응답 없음'">정상</span></div>
+                <dl class="kv">
+                    <dt>버전</dt><dd th:text="${modelInfo['version'] ?: '—'}">—</dd>
+                    <dt>학습 데이터</dt><dd th:text="${modelInfo['samples'] != null} ? |${modelInfo['samples']}명| : '—'">—</dd>
+                    <dt>시험 정확도</dt><dd class="num" th:text="${modelInfo['accuracy'] != null} ? |${#numbers.formatDecimal(modelInfo['accuracy'] * 100, 1, 1)}%| : '—'">—</dd>
+                </dl>
+                <p class="notice mt-3 mb-0">진단이 아닌 선별 참고 자료입니다. 결과는 상담자의 판단과 함께 쓰세요.</p>
+            </section>
+        </div>
+    </th:block>
+
+    <!-- 로그인 전: 무엇을 하는 도구인지 -->
+    <th:block sec:authorize="!isAuthenticated()">
+        <div class="title-row">
+            <div>
+                <h1>양육 스트레스 선별</h1>
+                <p>설문 10문항으로 부모의 스트레스 수준을 정상·주의·고위험으로 예측합니다.</p>
+            </div>
+            <a class="btn btn-primary" th:href="@{/login}">로그인</a>
+        </div>
+        <div class="ov">
+            <section class="panel span-8" aria-labelledby="h-how">
+                <div class="panel-head"><h2 id="h-how">이렇게 쓰입니다</h2></div>
+                <ol class="intro-steps">
+                    <li><b>설문 입력</b><span>나이, 자녀, 수면·근로 시간과 양육 효능감·사회적 지지 등 척도 점수.</span></li>
+                    <li><b>AI 예측</b><span>스트레스 수준, 위험점수(0~100), 위험을 높인 주요 요인.</span></li>
+                    <li><b>상담 연계</b><span>수준별 안내 문구와 고위험 대상자의 전문가 연계 검토.</span></li>
+                </ol>
+            </section>
+            <section class="panel span-4" aria-labelledby="h-model2">
+                <div class="panel-head"><h2 id="h-model2">예측 모델</h2>
+                    <span class="badge" th:classappend="${ai['status'] == 'UP'} ? 'bg-success' : 'bg-danger'" th:text="${ai['status'] == 'UP'} ? '정상' : '응답 없음'">정상</span></div>
+                <dl class="kv">
+                    <dt>학습 데이터</dt><dd th:text="${modelInfo['samples'] != null} ? |${modelInfo['samples']}명| : '—'">—</dd>
+                    <dt>시험 정확도</dt><dd class="num" th:text="${modelInfo['accuracy'] != null} ? |${#numbers.formatDecimal(modelInfo['accuracy'] * 100, 1, 1)}%| : '—'">—</dd>
+                </dl>
+                <p class="notice mt-3 mb-0">진단이 아닌 선별 참고 자료입니다.</p>
+            </section>
+            <section class="panel span-12" aria-labelledby="h-levels">
+                <div class="panel-head"><h2 id="h-levels">수준별 안내</h2><span class="stamp">예측 결과와 함께 상담자에게 보여 주는 문구</span></div>
+                <dl class="levels">
+                    <div style="--c: var(--accent-mid)"><dt>정상</dt><dd th:text="${T(com.example.stress.service.AssessmentService).guidance(0)}">안내</dd></div>
+                    <div style="--c: var(--accent)"><dt>주의</dt><dd th:text="${T(com.example.stress.service.AssessmentService).guidance(1)}">안내</dd></div>
+                    <div style="--c: var(--negative)"><dt>고위험</dt><dd th:text="${T(com.example.stress.service.AssessmentService).guidance(2)}">안내</dd></div>
+                </dl>
+            </section>
+        </div>
+    </th:block>
+</main>
+<footer th:replace="~{fragments :: footer}"></footer>
+</body>
+</html>

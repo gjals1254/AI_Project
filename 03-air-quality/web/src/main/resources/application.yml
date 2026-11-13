@@ -1,0 +1,42 @@
+server:
+  port: 8083
+
+spring:
+  application:
+    name: air-web
+  profiles:
+    active: jpa            # jpa | mybatis
+  datasource:
+    url: jdbc:mysql://localhost:3306/air_db?serverTimezone=Asia/Seoul&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true
+    username: aiuser
+    password: aipass1234
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  sql:
+    init:
+      mode: always
+      encoding: UTF-8
+  servlet:
+    multipart:
+      max-file-size: 5MB
+  thymeleaf:
+    cache: false
+
+app:
+  ai:
+    base-url: http://localhost:8003
+    connect-timeout-ms: 3000
+    read-timeout-ms: 30000
+  openapi:
+    service-key: ""          # 공공데이터포털 인증키(Decoding) — web/config/application.yml 에 넣는다
+  sync:
+    cron: "0 0 11 * * *"     # 매일 11시 어제치 자동 수집
+    source: openmeteo        # openmeteo(키 불필요, 모델 추정값) | publicdata(에어코리아+기상청 실측, 인증키 필요)
+  security:
+    admin-username: admin
+    admin-password: admin1234
+    user-username: operator
+    user-password: operator1234
+
+logging:
+  level:
+    com.example.air: DEBUG

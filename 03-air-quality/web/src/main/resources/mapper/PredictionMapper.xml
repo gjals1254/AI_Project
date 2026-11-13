@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.air.repository.mybatis.PredictionMapper">
+
+    <sql id="searchCondition">
+        <where>
+            <if test="stationId != null">AND station_id = #{stationId}</if>
+            <if test="grade != null">AND grade = #{grade}</if>
+        </where>
+    </sql>
+
+    <select id="findByMeasurementId" resultType="Prediction">
+        SELECT * FROM prediction WHERE measurement_id = #{measurementId} ORDER BY id DESC LIMIT 1
+    </select>
+
+    <select id="findRecent" resultType="Prediction">
+        SELECT * FROM prediction WHERE station_id = #{stationId}
+        ORDER BY target_date DESC
+        LIMIT #{limit}
+    </select>
+
+    <select id="findPage" resultType="Prediction">
+        SELECT * FROM prediction
+        <include refid="searchCondition"/>
+        ORDER BY target_date DESC, id DESC
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <select id="count" resultType="long">
+        SELECT COUNT(*) FROM prediction
+        <include refid="searchCondition"/>
+    </select>
+
+    <select id="countByGrade" resultType="GradeCount">
+        SELECT grade, COUNT(*) AS count FROM prediction GROUP BY grade ORDER BY grade
+    </select>
+
+    <insert id="insert" parameterType="Prediction" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO prediction (station_id, measurement_id, target_date, pred_pm10, pred_pm25,
+                                pm10_grade, pm25_grade, grade, grade_label, top_factors, model_version, created_at)
+        VALUES (#{stationId}, #{measurementId}, #{targetDate}, #{predPm10}, #{predPm25},
+                #{pm10Grade}, #{pm25Grade}, #{grade}, #{gradeLabel}, #{topFactors}, #{modelVersion}, #{createdAt})
+    </insert>
+
+    <delete id="deleteByMeasurementId">
+        DELETE FROM prediction WHERE measurement_id = #{measurementId}
+    </delete>
+</mapper>

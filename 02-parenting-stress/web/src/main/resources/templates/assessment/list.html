@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('평가 이력')}"></head>
+<body>
+<nav th:replace="~{fragments :: nav}"></nav>
+<main class="container">
+    <div th:replace="~{fragments :: alerts}"></div>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1 class="mb-0">평가 이력 <small class="text-muted fs-6" th:text="|총 ${result.total()}건|"></small></h1>
+        <a class="btn btn-primary" th:href="@{/assessments/new}">새 설문</a>
+    </div>
+
+    <!-- 수준별 건수 = 수준 필터 -->
+    <div class="count-cards" role="group" aria-label="수준으로 거르기">
+        <a th:href="@{/assessments(keyword=${keyword})}" th:classappend="${level == null} ? 'on'" th:attr="aria-current=${level == null} ? 'true' : null">
+            <span>전체</span><b class="num" th:text="${dist['정상'] + dist['주의'] + dist['고위험']}">0</b></a>
+        <a th:each="lv, st : ${ {'정상','주의','고위험'} }" th:href="@{/assessments(level=${st.index}, keyword=${keyword})}"
+           th:classappend="${level == st.index} ? 'on'" th:attr="aria-current=${level == st.index} ? 'true' : null">
+            <span th:text="${lv}">정상</span><b class="num" th:text="${dist[lv]}">0</b></a>
+    </div>
+
+    <form class="row g-2 mb-3" th:action="@{/assessments}" method="get">
+        <div class="col-md-4"><input name="keyword" class="form-control" th:value="${keyword}" placeholder="대상자 코드" aria-label="대상자 코드"></div>
+        <div class="col-md-3">
+            <select name="level" class="form-select" aria-label="수준">
+                <option value="">전체 수준</option>
+                <option value="0" th:selected="${level == 0}">정상</option>
+                <option value="1" th:selected="${level == 1}">주의</option>
+                <option value="2" th:selected="${level == 2}">고위험</option>
+            </select>
+        </div>
+        <div class="col-auto"><button class="btn btn-outline-secondary">조회</button></div>
+    </form>
+
+    <table class="table table-hover bg-white align-middle">
+        <thead><tr><th>ID</th><th>대상자</th><th>부모</th><th>자녀</th><th>수준</th><th class="text-end">위험점수</th>
+            <th>등록일시</th><th>등록자</th></tr></thead>
+        <tbody>
+        <tr th:each="a : ${result.content()}" style="cursor:pointer"
+            th:data-href="@{/assessments/{id}(id=${a.id})}" onclick="location.href=this.dataset.href">
+            <td th:text="${a.id}"></td>
+            <td th:text="${a.respondentCode}"></td>
+            <td th:text="|${a.parentAge}세|"></td>
+            <td th:text="|${a.childCount}명|"></td>
+            <td><span class="badge" th:classappend="'bg-' + ${a.levelColor()}" th:text="${a.stressLabel}"></span></td>
+            <td class="text-end" th:text="${a.riskScore != null} ? ${#numbers.formatDecimal(a.riskScore, 1, 1)} : '—'"></td>
+            <td th:text="${#temporals.format(a.createdAt, 'yyyy-MM-dd HH:mm')}"></td>
+            <td th:text="${a.createdBy}"></td>
+        </tr>
+        <tr th:if="${result.content().isEmpty()}"><td colspan="8" class="text-muted">조건에 맞는 평가가 없습니다.</td></tr>
+        </tbody>
+    </table>
+    <div th:replace="~{fragments :: pagination(${result}, '/assessments')}"></div>
+</main>
+<footer th:replace="~{fragments :: footer}"></footer>
+</body>
+</html>

@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.air.repository.mybatis.StationMapper">
+
+    <select id="findById" resultType="Station">
+        SELECT * FROM station WHERE id = #{id}
+    </select>
+
+    <select id="findAll" resultType="Station">
+        SELECT * FROM station
+        <if test="activeOnly">WHERE active = 1</if>
+        ORDER BY id
+    </select>
+
+    <select id="countByName" resultType="int">
+        SELECT COUNT(*) FROM station WHERE name = #{name}
+    </select>
+
+    <insert id="insert" parameterType="Station" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO station (name, region, address, latitude, longitude, active, airkorea_name, kma_stn_id, created_at)
+        VALUES (#{name}, #{region}, #{address}, #{latitude}, #{longitude}, #{active}, #{airkoreaName}, #{kmaStnId}, #{createdAt})
+    </insert>
+
+    <update id="update" parameterType="Station">
+        UPDATE station
+        SET name = #{name}, region = #{region}, address = #{address},
+            latitude = #{latitude}, longitude = #{longitude}, active = #{active},
+            airkorea_name = #{airkoreaName}, kma_stn_id = #{kmaStnId}
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM station WHERE id = #{id}
+    </delete>
+</mapper>

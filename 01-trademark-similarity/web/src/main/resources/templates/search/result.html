@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('검색 결과')}"></head>
+<body>
+<nav th:replace="~{fragments :: nav}"></nav>
+<main class="container">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1 class="mb-0" style="font-size:24px">검색 결과</h1>
+        <div>
+            <a th:if="${adminView}" class="btn btn-outline-secondary" th:href="@{/admin/history}">이력 목록</a>
+            <a class="btn btn-primary" th:href="@{/search}">새 검색</a>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-4">
+        <div class="col-md-4">
+            <div class="card p-3 h-100 text-center">
+                <div class="text-muted mb-2">검색 이미지</div>
+                <img class="query-image mx-auto" th:src="@{'/uploads/' + ${view.history().queryImagePath}}" alt="검색 이미지">
+                <div class="small text-muted mt-3">
+                    <div th:text="${#temporals.format(view.history().searchedAt, 'yyyy-MM-dd HH:mm:ss')}"></div>
+                    <div th:text="|모델: ${view.history().modelName}|"></div>
+                    <div th:if="${view.history().niceClass != null}" th:text="|상품분류: 제${view.history().niceClass}류|"></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-8">
+            <div class="card p-3 h-100 d-flex flex-column">
+                <div class="text-muted mb-2">유사도 점수 (코사인 유사도 × 100)</div>
+                <div style="position:relative; flex:1; min-height:220px"><canvas id="scoreChart"></canvas></div>
+                <div th:if="${view.items().isEmpty()}" class="alert alert-light mt-3">
+                    비교할 상표가 없습니다. 같은 모델로 벡터가 만들어진 상표가 등록되어 있는지 확인하세요.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row row-cols-2 row-cols-md-3 row-cols-lg-5 g-3">
+        <div class="col" th:each="item : ${view.items()}">
+            <div class="card h-100 position-relative">
+                <span class="badge bg-dark rank-badge" th:text="${item.rank()}">1</span>
+                <th:block th:if="${item.trademark() != null}">
+                    <a th:href="@{/trademarks/{id}(id=${item.trademarkId()})}">
+                        <img class="thumb" th:src="@{'/uploads/' + ${item.trademark().imagePath}}" alt="">
+                    </a>
+                    <div class="card-body p-2">
+                        <div class="fw-semibold text-truncate" th:text="${item.trademark().name}"></div>
+                        <div class="small text-muted text-truncate" th:text="${item.trademark().applicationNo}"></div>
+                        <div class="small text-muted" th:if="${item.trademark().niceClass != null}"
+                             th:text="|제${item.trademark().niceClass}류 · ${item.trademark().applicant ?: ''}|"></div>
+                    </div>
+                </th:block>
+                <div th:if="${item.trademark() == null}" class="card-body text-muted">삭제된 상표</div>
+                <div class="card-footer bg-white">
+                    <div class="d-flex justify-content-between small mb-1">
+                        <span th:text="|${item.percent()}%|"></span>
+                        <span class="badge" th:classappend="'bg-' + ${item.levelColor()}" th:text="${item.level()}"></span>
+                    </div>
+                    <div class="progress" style="height: 6px">
+                        <div class="progress-bar" th:classappend="'bg-' + ${item.levelColor()}"
+                             th:style="|width: ${item.percent()}%|"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+<footer th:replace="~{fragments :: footer}"></footer>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script th:inline="javascript">
+    const labels = /*[[${view.chartLabels()}]]*/ [];
+    const scores = /*[[${view.chartScores()}]]*/ [];
+    if (labels.length) {
+        new Chart(document.getElementById('scoreChart'), {
+            type: 'bar',
+            data: { labels, datasets: [{ label: '유사도(%)', data: scores, backgroundColor: '#c6f24e' }] },
+            options: { indexAxis: 'y', maxBarThickness: 18, maintainAspectRatio: false,
+                scales: { x: { min: 0, max: 100, ticks: { color: '#949494', stepSize: 25 }, grid: { color: '#2b2b2b' }, border: { display: false } },
+                          y: { ticks: { color: '#b4b4b4' }, grid: { display: false }, border: { color: '#444' } } },
+                plugins: { legend: { display: false }, tooltip: { displayColors: false } } }
+        });
+    }
+</script>
+</body>
+</html>

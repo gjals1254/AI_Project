@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{fragments :: head('예측 결과')}"></head>
+<body>
+<nav th:replace="~{fragments :: nav}"></nav>
+<main class="container">
+    <div th:replace="~{fragments :: alerts}"></div>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1 class="mb-0">예측 결과 <small class="text-muted fs-6" th:text="${a.respondentCode}"></small></h1>
+        <div class="d-flex gap-2">
+            <form th:action="@{/assessments/{id}/repredict(id=${a.id})}" method="post">
+                <button class="btn btn-outline-secondary btn-sm">현재 모델로 재예측</button>
+            </form>
+            <form sec:authorize="hasRole('ADMIN')" th:action="@{/assessments/{id}/delete(id=${a.id})}" method="post"
+                  onsubmit="return confirm('삭제하시겠습니까?')">
+                <button class="btn btn-outline-danger btn-sm">삭제</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-3">
+        <div class="col-md-4">
+            <div class="card p-4 text-center h-100">
+                <div class="text-muted">스트레스 수준</div>
+                <div class="display-5 fw-bold my-2" th:classappend="'text-' + ${a.levelColor()}"
+                     th:text="${a.stressLabel}">주의</div>
+                <div class="text-muted">위험점수</div>
+                <div class="fs-2 fw-semibold" th:text="${#numbers.formatDecimal(a.riskScore, 1, 1)}">50.0</div>
+                <div class="progress mt-2" style="height: 10px">
+                    <div class="progress-bar" th:classappend="'bg-' + ${a.levelColor()}"
+                         th:style="|width: ${a.riskScore}%|"></div>
+                </div>
+                <div class="small text-muted mt-2" th:text="|모델 ${a.modelVersion}|"></div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card p-3 h-100">
+                <div class="text-muted mb-2">수준별 확률</div>
+                <canvas id="probChart"></canvas>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card p-3 h-100">
+                <div class="text-muted mb-2">위험을 높이는 주요 요인</div>
+                <canvas id="factorChart" th:if="${!factors.isEmpty()}"></canvas>
+                <p class="text-muted small" th:if="${factors.isEmpty()}">두드러진 위험 요인이 없습니다.</p>
+                <p class="small text-muted mt-2 mb-0">막대 = 해당 항목을 표본 중앙값으로 바꿨을 때 줄어드는 위험점수</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="alert" th:classappend="'alert-' + ${a.levelColor()}" th:text="${guidance}"></div>
+
+    <div class="row g-3">
+        <div class="col-md-6">
+            <div class="card p-3">
+                <h6>입력 설문</h6>
+                <table class="table table-sm mb-0">
+                    <tr><th>부모 나이</th><td th:text="|${a.parentAge}세|"></td></tr>
+                    <tr><th>자녀</th><td th:text="|${a.childCount}명 · 막내 ${a.youngestChildAge}세|"></td></tr>
+                    <tr><th>근로 / 수면</th><td th:text="|주 ${a.weeklyWorkHours}시간 / 하루 ${a.sleepHours}시간|"></td></tr>
+                    <tr><th>양육 효능감 / 사회적 지지</th><td th:text="|${a.parentingEfficacy} / ${a.socialSupport}|"></td></tr>
+                    <tr><th>가족 환경 / 회복탄력성</th><td th:text="|${a.familyEnvironment} / ${a.resilience}|"></td></tr>
+                    <tr><th>삶의 질</th><td th:text="${a.qualityOfLife}"></td></tr>
+                    <tr><th>메모</th><td th:text="${a.memo} ?: '-'"></td></tr>
+                    <tr><th>등록</th><td th:text="|${#temporals.format(a.createdAt, 'yyyy-MM-dd HH:mm')} · ${a.createdBy}|"></td></tr>
+                </table>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card p-3">
+                <h6>같은 대상자의 위험점수 추이</h6>
+                <canvas id="trendChart"></canvas>
+            </div>
+        </div>
+    </div>
+</main>
+<footer th:replace="~{fragments :: footer}"></footer>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script th:inline="javascript">
+    // 한 가지 색(청록)의 단계 + 고위험만 경고색, 격자는 옅게
+    Chart.defaults.font.family = '"IBM Plex Sans KR", system-ui, sans-serif';
+    Chart.defaults.color = '#5b5f5d';
+    Chart.defaults.borderColor = '#eff1f0';
+    const LEVEL = ['#8cbcc8', '#1b6c80', '#c4242a'];
+    const prob = [ /*[[${a.probNormal}]]*/ 0, /*[[${a.probCaution}]]*/ 0, /*[[${a.probHigh}]]*/ 0 ];
+    new Chart(document.getElementById('probChart'), {
+        type: 'doughnut',
+        data: { labels: ['정상', '주의', '고위험'],
+                datasets: [{ data: prob.map(p => Math.round(p * 1000) / 10),
+                             backgroundColor: LEVEL, borderWidth: 2, borderColor: '#fff' }] },
+        options: { cutout: '78%', plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, boxHeight: 10 } } } }
+    });
+
+    const factors = /*[[${factors}]]*/ [];
+    if (factors.length) {
+        new Chart(document.getElementById('factorChart'), {
+            type: 'bar',
+            data: { labels: factors.map(f => f.label),
+                    datasets: [{ data: factors.map(f => f.impact), backgroundColor: '#1b6c80', maxBarThickness: 16 }] },
+            options: { indexAxis: 'y', plugins: { legend: { display: false } },
+                       scales: { x: { border: { display: false } }, y: { grid: { display: false } } } }
+        });
+    }
+
+    const trendLabels = /*[[${trendLabels}]]*/ [];
+    const trendScores = /*[[${trendScores}]]*/ [];
+    new Chart(document.getElementById('trendChart'), {
+        type: 'line',
+        data: { labels: trendLabels,
+                datasets: [{ label: '위험점수', data: trendScores, borderColor: '#1b6c80', backgroundColor: '#1b6c80', borderWidth: 2, tension: 0, pointRadius: 3 }] },
+        options: { plugins: { legend: { display: false } },
+                   scales: { y: { min: 0, max: 100, ticks: { stepSize: 25 }, border: { display: false } }, x: { grid: { display: false } } } }
+    });
+</script>
+</body>
+</html>

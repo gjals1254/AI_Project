@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('관리자')}"></head>
+<body>
+<nav th:replace="~{fragments :: nav}"></nav>
+<main class="container">
+    <div th:replace="~{fragments :: alerts}"></div>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1 class="mb-0">관리자 대시보드</h1>
+        <div class="btn-group">
+            <a class="btn btn-outline-dark" th:href="@{/admin/stations}">측정소 관리</a>
+            <a class="btn btn-outline-dark" th:href="@{/admin/import}">CSV 일괄 등록</a>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-4"><div class="card p-3"><div class="text-muted">측정소</div>
+            <div class="stat" th:text="${stationCount}">0</div></div></div>
+        <div class="col-md-4"><div class="card p-3"><div class="text-muted">측정 데이터</div>
+            <div class="stat" th:text="${measurementCount}">0</div></div></div>
+        <div class="col-md-4"><div class="card p-3"><div class="text-muted">AI 서버</div>
+            <div class="stat" th:classappend="${ai['status'] == 'UP'} ? 'text-success' : 'text-danger'"
+                 th:text="${ai['status']}">UP</div></div></div>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-md-4">
+            <div class="card p-3 h-100">
+                <h6>예측 등급 분포</h6>
+                <canvas id="distChart"></canvas>
+            </div>
+        </div>
+        <div class="col-md-8">
+            <div class="card p-3 h-100">
+                <h6>모델 변수 중요도</h6>
+                <canvas id="impChart" height="170"></canvas>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card p-3">
+                <h6>모델 정보</h6>
+                <table class="table table-sm mb-0">
+                    <tr><th>버전</th><td th:text="${modelInfo['version']}"></td></tr>
+                    <tr><th>알고리즘</th><td th:text="${modelInfo['algorithm']}"></td></tr>
+                    <tr><th>학습 데이터</th><td th:text="|${modelInfo['dataSource']} (${modelInfo['samples']}건)|"></td></tr>
+                    <tr><th>MAE PM10 / PM2.5</th><td th:text="|${modelInfo['maePm10']} / ${modelInfo['maePm25']} ㎍/㎥|"></td></tr>
+                    <tr><th>등급 정확도</th><td th:text="${modelInfo['gradeAccuracy']}"></td></tr>
+                    <tr><th>학습일시</th><td th:text="${modelInfo['trainedAt']}"></td></tr>
+                    <tr><th>영속 계층</th><td class="text-uppercase" th:text="${persistence}"></td></tr>
+                </table>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card p-3">
+                <h6>API 자동 수집 <span class="badge bg-secondary" th:text="${syncSource}">source</span></h6>
+                <p class="small text-muted mb-2">매일 11시에 전날 값을 자동 수집·예측합니다. Open-Meteo 는 측정소 위경도,
+                    에어코리아+기상청은 측정소명·지점번호가 입력된 측정소만 수집합니다. 놓친 날은 날짜를 지정해 수집하세요.</p>
+                <form th:action="@{/admin/sync}" method="post" class="row g-2">
+                    <div class="col-auto"><input type="date" name="date" class="form-control" title="비우면 어제"></div>
+                    <div class="col-auto"><button class="btn btn-primary">수집</button></div>
+                </form>
+                <ul class="small text-danger mt-2 mb-0" th:if="${syncResult != null and !syncResult.errors().isEmpty()}">
+                    <li th:each="e : ${syncResult.errors()}" th:text="${e}"></li>
+                </ul>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card p-3">
+                <h6>모델 재학습</h6>
+                <p class="small text-muted">Open-Meteo 에서 기본 측정소 5곳의 최근 2년(어제까지) 자료를 새로 받아 재학습합니다
+                    (자동 수집과 같은 출처·단위, 약 20~30초). 공공데이터 실측 자료로 학습하려면 AI 서버에서
+                    <code>python train.py --csv data.csv</code> 실행 후 AI 서버를 재시작하세요.</p>
+                <form th:action="@{/admin/retrain}" method="post"
+                      onsubmit="return confirm('Open-Meteo 최근 2년 자료로 모델을 재학습합니다. 계속할까요?')">
+                    <button class="btn btn-warning">재학습</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</main>
+<footer th:replace="~{fragments :: footer}"></footer>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script th:inline="javascript">
+    // 무채색 선 + 예측은 점선, 등급 색은 등급에만. 격자 4~5줄, 직선.
+    Chart.defaults.font.family = '"Public Sans", "Gothic A1", system-ui, sans-serif';
+    Chart.defaults.font.size = 12;
+    Chart.defaults.color = '#8a8c92';
+    Chart.defaults.borderColor = '#222224';
+    const dist = /*[[${distribution}]]*/ {};
+    new Chart(document.getElementById('distChart'), {
+        type: 'doughnut',
+        data: { labels: Object.keys(dist),
+                datasets: [{ data: Object.values(dist), backgroundColor: ['#5aa9f0', '#46b38a', '#e0a33c', '#ef5f76'], borderWidth: 2, borderColor: '#131217' }] },
+        options: { cutout: '80%', plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, boxHeight: 10 } } } }
+    });
+    const imp = /*[[${modelInfo['featureImportances']}]]*/ [];
+    if (imp) {
+        new Chart(document.getElementById('impChart'), {
+            type: 'bar',
+            data: { labels: imp.map(i => i.label), datasets: [{ data: imp.map(i => i.importance), backgroundColor: '#f2f2f3', maxBarThickness: 14 }] },
+            options: { indexAxis: 'y', plugins: { legend: { display: false } },
+                       scales: { x: { border: { display: false } }, y: { grid: { display: false } } } }
+        });
+    }
+</script>
+</body>
+</html>

@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security" lang="ko">
+<head th:replace="~{fragments :: head('개요')}"></head>
+<body>
+<nav th:replace="~{fragments :: nav}"></nav>
+<main class="container">
+    <div class="title-row">
+        <div>
+            <h1>상표 유사도 검색</h1>
+            <p th:text="|등록 상표 ${trademarkCount}건과 로고 이미지를 비교해 가장 비슷한 상표부터 보여 줍니다.|">등록 상표와 비교합니다.</p>
+        </div>
+    </div>
+
+    <div class="overview">
+        <div class="stack">
+            <section class="kpis" aria-label="현황">
+                <div>
+                    <div class="kpi-label">등록 상표</div>
+                    <div class="kpi-value num" th:text="${#numbers.formatInteger(trademarkCount, 1, 'COMMA')}">0</div>
+                    <div class="kpi-note" th:text="${withoutVector == 0} ? '모두 비교 가능' : |벡터 없음 ${withoutVector}건|">모두 비교 가능</div>
+                </div>
+                <div>
+                    <div class="kpi-label">오늘 검색</div>
+                    <div class="kpi-value num" th:text="${searchesToday}">0</div>
+                    <div class="kpi-note" th:text="|누적 ${#numbers.formatInteger(searchCount, 1, 'COMMA')}회|">누적 0회</div>
+                </div>
+                <div>
+                    <div class="kpi-label">특징 추출 모델</div>
+                    <div class="kpi-value kpi-text" th:text="${ai['model'] ?: '—'}">model</div>
+                    <div class="kpi-note" th:text="${ai['dim'] != null} ? |${ai['dim']}차원 벡터| : '—'">벡터</div>
+                </div>
+                <div>
+                    <div class="kpi-label">저장 방식</div>
+                    <div class="kpi-value kpi-text" th:text="${#strings.toUpperCase(persistence)}">JPA</div>
+                    <div class="kpi-note">영속 계층 프로파일</div>
+                </div>
+            </section>
+
+            <section class="panel" aria-labelledby="h-search">
+                <div class="panel-head"><h2 id="h-search">로고로 비슷한 상표 찾기</h2></div>
+                <div class="search-lead">
+                    <a class="drop-mini" th:href="@{/search}">
+                        <span><svg viewBox="0 0 28 28" aria-hidden="true"><path d="M14 19V7M8 12l6-6 6 6M5 21h18"/></svg><br>
+                        로고 이미지 올리기<br><small class="text-muted">PNG · JPG · 10MB까지</small></span>
+                    </a>
+                    <ol class="steps">
+                        <li><b>특징 추출</b><span th:text="|AI 서버(${ai['model'] ?: '모델'})가 이미지를 벡터로 바꿉니다.|">이미지를 벡터로 바꿉니다.</span></li>
+                        <li><b>비교</b><span>같은 모델로 만든 등록 상표 벡터와 코사인 유사도를 계산합니다.</span></li>
+                        <li><b>순위</b><span>유사도가 높은 상표부터 보여 주고, 85% 이상은 '높음'으로 표시합니다.</span></li>
+                    </ol>
+                </div>
+            </section>
+
+            <section class="panel" aria-labelledby="h-recent">
+                <div class="panel-head">
+                    <h2 id="h-recent">최근 등록된 상표</h2>
+                    <a th:href="@{/trademarks}" th:text="|전체 ${trademarkCount}건 보기|">전체 보기</a>
+                </div>
+                <div class="mark-grid" th:unless="${recentTrademarks.isEmpty()}">
+                    <a class="mark" th:each="t : ${recentTrademarks}" th:href="@{/trademarks/{id}(id=${t.id})}">
+                        <img th:src="@{'/uploads/' + ${t.imagePath}}" th:alt="${t.name}">
+                        <div><th:block th:text="${t.name}">상표명</th:block><span th:text="${t.applicationNo}">출원번호</span></div>
+                    </a>
+                </div>
+                <p class="empty m-0" th:if="${recentTrademarks.isEmpty()}">아직 등록된 상표가 없습니다. 상표를 등록하면 검색 대상이 됩니다.</p>
+            </section>
+        </div>
+
+        <aside class="stack" aria-label="상태">
+            <section class="panel" aria-labelledby="h-ai">
+                <div class="panel-head"><h2 id="h-ai">AI 서버</h2>
+                    <span><span class="status-dot" th:classappend="${ai['status'] == 'UP'} ? 'up' : 'down'"></span><span th:text="${ai['status'] == 'UP'} ? '정상' : '응답 없음'">정상</span></span>
+                </div>
+                <dl class="kv">
+                    <dt>모델</dt><dd th:text="${ai['model'] ?: '—'}">—</dd>
+                    <dt>벡터 차원</dt><dd class="num" th:text="${ai['dim'] ?: '—'}">—</dd>
+                    <dt>비교 불가 상표</dt><dd class="num" th:text="|${withoutVector}건|">0건</dd>
+                </dl>
+            </section>
+
+            <section class="panel" aria-labelledby="h-hist" sec:authorize="hasRole('ADMIN')">
+                <div class="panel-head"><h2 id="h-hist">최근 검색</h2><a th:href="@{/admin/history}">전체 이력</a></div>
+                <ul class="rows" th:unless="${recentSearches.isEmpty()}">
+                    <li th:each="h : ${recentSearches}">
+                        <img th:src="@{'/uploads/' + ${h.queryImagePath}}" alt="검색 이미지">
+                        <div class="grow">
+                            <a th:href="@{/search/results/{id}(id=${h.id})}" th:text="|결과 ${h.resultCount}건|">결과</a>
+                            <div class="sub" th:text="${#temporals.format(h.searchedAt, 'MM-dd HH:mm')}">시간</div>
+                        </div>
+                        <div class="score" th:text="${h.topScore != null} ? |${#numbers.formatDecimal(h.topScore * 100, 1, 1)}%| : '—'">—</div>
+                    </li>
+                </ul>
+                <p class="empty m-0" th:if="${recentSearches.isEmpty()}">아직 검색 이력이 없습니다.</p>
+            </section>
+
+            <section class="panel" aria-labelledby="h-guide" sec:authorize="!hasRole('ADMIN')">
+                <div class="panel-head"><h2 id="h-guide">유사도 기준</h2></div>
+                <dl class="kv">
+                    <dt>높음</dt><dd>85% 이상</dd>
+                    <dt>보통</dt><dd>70% ~ 85%</dd>
+                    <dt>낮음</dt><dd>70% 미만</dd>
+                </dl>
+            </section>
+        </aside>
+    </div>
+</main>
+<footer th:replace="~{fragments :: footer}"></footer>
+</body>
+</html>

@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
+<head th:fragment="head(title)">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="dark">
+    <title th:text="${title} + ' | 숨결 대기질'">숨결</title>
+    <script>document.documentElement.setAttribute('data-bs-theme', 'dark');</script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&family=Gothic+A1:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+
+<body>
+<!-- 셸: 아이콘 레일(56px). 폰에서는 이름 붙은 하단 바 -->
+<nav th:fragment="nav" class="rail" aria-label="주 메뉴">
+    <a class="rail-brand" th:href="@{/}" title="숨결 — 내일 예보" aria-label="숨결 홈">
+        <svg viewBox="0 0 28 28" aria-hidden="true"><path d="M4 11h13a3 3 0 1 0-3-3M4 16h17a3 3 0 1 1-3 3M4 21h8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </a>
+    <a class="rail-link" th:href="@{/}" data-match="/" data-exact="true" title="내일 예보" aria-label="내일 예보">
+        <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="3.5"/><path d="M10 2v2M10 16v2M2 10h2M16 10h2M4.3 4.3l1.4 1.4M14.3 14.3l1.4 1.4M4.3 15.7l1.4-1.4M14.3 5.7l1.4-1.4"/></svg><span>예보</span></a>
+    <a class="rail-link" th:href="@{/predictions}" data-match="/predictions" title="예측 이력" aria-label="예측 이력">
+        <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 15l4-5 3 3 6-8"/><path d="M3 18h14"/></svg><span>예측</span></a>
+    <a class="rail-link" th:href="@{/measurements}" data-match="/measurements" data-exclude="/measurements/new" title="측정 데이터" aria-label="측정 데이터">
+        <svg viewBox="0 0 20 20" aria-hidden="true"><rect x="3" y="3" width="14" height="14" rx="2"/><path d="M3 8h14M8 8v9"/></svg><span>측정</span></a>
+    <a class="rail-link" sec:authorize="hasAnyRole('OPERATOR','ADMIN')" th:href="@{/measurements/new}" data-match="/measurements/new" title="측정 등록" aria-label="측정 등록">
+        <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 4v12M4 10h12"/></svg><span>등록</span></a>
+    <a class="rail-link" sec:authorize="hasRole('ADMIN')" th:href="@{/admin}" data-match="/admin" title="관리 · 수집 · 재학습" aria-label="관리">
+        <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="2.5"/><path d="M10 2.5v2.2M10 15.3v2.2M2.5 10h2.2M15.3 10h2.2M4.7 4.7l1.6 1.6M13.7 13.7l1.6 1.6M4.7 15.3l1.6-1.6M13.7 6.3l1.6-1.6"/></svg><span>관리</span></a>
+    <div class="rail-foot">
+        <form sec:authorize="isAuthenticated()" th:action="@{/logout}" method="post" class="m-0">
+            <button class="rail-link" th:title="|로그아웃 (${#authentication.name})|" aria-label="로그아웃">
+                <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M8 4H4v12h4M12 6l4 4-4 4M16 10H8"/></svg><span>로그아웃</span></button>
+        </form>
+        <a sec:authorize="!isAuthenticated()" class="rail-link" th:href="@{/login}" title="로그인" aria-label="로그인">
+            <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M12 4h4v12h-4M8 6l-4 4 4 4M4 10h8"/></svg><span>로그인</span></a>
+    </div>
+    <script>
+        (function () {
+            var path = location.pathname;
+            document.querySelectorAll('.rail-link[data-match]').forEach(function (a) {
+                var m = a.dataset.match, hit = a.dataset.exact ? path === m
+                    : path.indexOf(m) === 0 && !(a.dataset.exclude && path.indexOf(a.dataset.exclude) === 0);
+                if (hit) { a.classList.add('active'); a.setAttribute('aria-current', 'page'); }
+            });
+        })();
+    </script>
+</nav>
+
+<div th:fragment="alerts">
+    <div th:if="${message}" class="alert alert-success" th:text="${message}"></div>
+    <div th:if="${warning}" class="alert alert-warning" th:text="${warning}"></div>
+</div>
+
+<!-- 등급 배지: 색상 + 등급명 -->
+<span th:fragment="badge(color, label)" class="grade" th:style="|--g:${color}|" th:text="${label}">보통</span>
+
+<!-- <nav> 가 아닌 <div>: ~{fragments :: nav} 선택자가 <nav> 요소까지 매칭하기 때문 -->
+<div th:fragment="pagination(result, url)" th:if="${result.totalPages() > 1}" role="navigation">
+    <ul class="pagination justify-content-center">
+        <li class="page-item" th:classappend="${!result.hasPrev()} ? 'disabled'">
+            <a class="page-link" th:href="@{${url}(page=${result.page() - 1}, stationId=${stationId}, grade=${grade})}">이전</a>
+        </li>
+        <li class="page-item" th:each="i : ${#numbers.sequence(0, result.totalPages() - 1)}"
+            th:classappend="${i == result.page()} ? 'active'">
+            <a class="page-link" th:href="@{${url}(page=${i}, stationId=${stationId}, grade=${grade})}" th:text="${i + 1}">1</a>
+        </li>
+        <li class="page-item" th:classappend="${!result.hasNext()} ? 'disabled'">
+            <a class="page-link" th:href="@{${url}(page=${result.page() + 1}, stationId=${stationId}, grade=${grade})}">다음</a>
+        </li>
+    </ul>
+</div>
+
+<footer th:fragment="footer" class="foot">
+    <script>
+        // 표: 가로로 넘치면 표 안에서만 스크롤, 숫자만 있는 열은 오른쪽 정렬
+        document.querySelectorAll('main table.table').forEach(function (t) {
+            if (!t.parentElement.classList.contains('table-responsive')) {
+                var w = document.createElement('div'); w.className = 'table-responsive';
+                t.parentNode.insertBefore(w, t); w.appendChild(t);
+            }
+            var rows = t.tBodies[0] ? Array.from(t.tBodies[0].rows) : [];
+            var head = t.tHead ? t.tHead.rows[0] : null, cols = head ? head.cells.length : 0;
+            for (var c = 0; c < cols; c++) {
+                var cells = rows.map(function (r) { return r.cells[c]; }).filter(function (x) { return x && x.textContent.trim() !== ''; });
+                var numeric = cells.length && cells.every(function (x) { return /^[−+-]?[\d,.]+\s*(%|㎍\/㎥|ppm|℃|mm|m\/s)?$/.test(x.textContent.trim()); });
+                if (numeric) { head.cells[c].classList.add('text-end'); cells.forEach(function (x) { x.classList.add('text-end'); }); }
+            }
+        });
+    </script>
+    등급 기준: 환경부 미세먼지 예보 등급 (PM10 30/80/150, PM2.5 15/35/75 ㎍/㎥)
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</footer>
+</body>
+</html>

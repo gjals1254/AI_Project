@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('검색 이력')}"></head>
+<body>
+<nav th:replace="~{fragments :: nav}"></nav>
+<main class="container">
+    <div th:replace="~{fragments :: alerts}"></div>
+    <h1 class="mb-3">검색 이력 <small class="text-muted fs-6" th:text="|총 ${result.total()}건|"></small></h1>
+
+    <table class="table table-hover bg-white align-middle">
+        <thead><tr><th>ID</th><th>검색 이미지</th><th>검색일시</th><th>상품분류</th><th>모델</th>
+            <th>결과 수</th><th>최고 유사도</th><th>IP</th><th></th></tr></thead>
+        <tbody>
+        <tr th:each="h : ${result.content()}">
+            <td th:text="${h.id}"></td>
+            <td><img class="thumb-sm" th:src="@{'/uploads/' + ${h.queryImagePath}}" alt=""></td>
+            <td th:text="${#temporals.format(h.searchedAt, 'yyyy-MM-dd HH:mm:ss')}"></td>
+            <td th:text="${h.niceClass} ?: '전체'"></td>
+            <td class="small" th:text="${h.modelName}"></td>
+            <td th:text="${h.resultCount}"></td>
+            <td th:text="${h.topScore != null} ? |${#numbers.formatDecimal(h.topScore * 100, 1, 1)}%| : '-'"></td>
+            <td class="small" th:text="${h.clientIp}"></td>
+            <td class="text-nowrap">
+                <a class="btn btn-sm btn-outline-primary" th:href="@{/admin/history/{id}(id=${h.id})}">상세</a>
+                <form class="d-inline" th:action="@{/admin/history/{id}/delete(id=${h.id})}" method="post"
+                      onsubmit="return confirm('삭제하시겠습니까?')">
+                    <button class="btn btn-sm btn-outline-danger">삭제</button>
+                </form>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+    <div th:replace="~{fragments :: pagination(${result}, '/admin/history')}"></div>
+</main>
+<footer th:replace="~{fragments :: footer}"></footer>
+</body>
+</html>

@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.trademark.repository.mybatis.SearchHistoryMapper">
+
+    <insert id="insertHistory" parameterType="SearchHistory" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO search_history (query_image_path, nice_class, model_name, result_count,
+                                    top_score, top_trademark_id, client_ip, searched_at)
+        VALUES (#{queryImagePath}, #{niceClass}, #{modelName}, #{resultCount},
+                #{topScore}, #{topTrademarkId}, #{clientIp}, #{searchedAt})
+    </insert>
+
+    <!-- 다건 INSERT -->
+    <insert id="insertResults">
+        INSERT INTO search_result (history_id, trademark_id, rank_no, score)
+        VALUES
+        <foreach collection="results" item="r" separator=",">
+            (#{r.historyId}, #{r.trademarkId}, #{r.rankNo}, #{r.score})
+        </foreach>
+    </insert>
+
+    <select id="findById" resultType="SearchHistory">
+        SELECT * FROM search_history WHERE id = #{id}
+    </select>
+
+    <select id="findResults" resultType="SearchResult">
+        SELECT * FROM search_result WHERE history_id = #{historyId} ORDER BY rank_no
+    </select>
+
+    <select id="findPage" resultType="SearchHistory">
+        SELECT * FROM search_history ORDER BY id DESC LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <select id="count" resultType="long">
+        SELECT COUNT(*) FROM search_history
+    </select>
+
+    <select id="countSince" resultType="long">
+        SELECT COUNT(*) FROM search_history WHERE searched_at &gt;= #{from}
+    </select>
+
+    <delete id="deleteResults">
+        DELETE FROM search_result WHERE history_id = #{historyId}
+    </delete>
+
+    <delete id="deleteById">
+        DELETE FROM search_history WHERE id = #{id}
+    </delete>
+</mapper>

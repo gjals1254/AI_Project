@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('유사 상표 검색')}"></head>
+<body>
+<nav th:replace="~{fragments :: nav}"></nav>
+<main class="container" style="max-width: 760px">
+    <h1 class="mb-3">유사 상표 검색</h1>
+    <div th:if="${error}" class="alert alert-danger" th:text="${error}"></div>
+
+    <form class="card p-4" th:action="@{/search}" method="post" enctype="multipart/form-data"
+          onsubmit="document.getElementById('submitBtn').disabled = true; document.getElementById('spinner').classList.remove('d-none')">
+        <label class="drop-zone mb-3" id="dropZone">
+            <input type="file" name="image" id="imageInput" accept="image/*" class="d-none" required>
+            <div id="dropText">
+                <div class="fs-5">검색할 상표 이미지를 끌어다 놓거나 클릭해서 선택하세요</div>
+                <div class="small text-muted">PNG, JPG, GIF, BMP, WEBP · 최대 10MB</div>
+            </div>
+            <img id="preview" class="d-none mx-auto" alt="미리보기">
+        </label>
+
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label class="form-label">상품분류 필터 (선택)</label>
+                <input type="number" min="1" max="45" name="niceClass" class="form-control" placeholder="전체">
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">결과 개수</label>
+                <select name="topK" class="form-select">
+                    <option value="5">5개</option>
+                    <option value="10" selected>10개</option>
+                    <option value="20">20개</option>
+                </select>
+            </div>
+        </div>
+
+        <button id="submitBtn" class="btn btn-primary btn-lg mt-4">
+            <span id="spinner" class="spinner-border spinner-border-sm d-none"></span>
+            유사 상표 찾기
+        </button>
+    </form>
+</main>
+<footer th:replace="~{fragments :: footer}"></footer>
+<script>
+    const zone = document.getElementById('dropZone');
+    const input = document.getElementById('imageInput');
+    const preview = document.getElementById('preview');
+    function show(file) {
+        preview.src = URL.createObjectURL(file);
+        preview.classList.remove('d-none');
+        document.getElementById('dropText').classList.add('d-none');
+    }
+    input.addEventListener('change', () => input.files[0] && show(input.files[0]));
+    ['dragenter', 'dragover'].forEach(e => zone.addEventListener(e, ev => { ev.preventDefault(); zone.classList.add('dragover'); }));
+    ['dragleave', 'drop'].forEach(e => zone.addEventListener(e, ev => { ev.preventDefault(); zone.classList.remove('dragover'); }));
+    zone.addEventListener('drop', ev => {
+        if (ev.dataTransfer.files.length) { input.files = ev.dataTransfer.files; show(input.files[0]); }
+    });
+</script>
+</body>
+</html>

@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{fragments :: head('상표 목록')}"></head>
+<body>
+<nav th:replace="~{fragments :: nav}"></nav>
+<main class="container">
+    <div th:replace="~{fragments :: alerts}"></div>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1 class="mb-0">등록 상표 <small class="text-muted fs-6" th:text="|총 ${result.total()}건|"></small></h1>
+        <a sec:authorize="isAuthenticated()" class="btn btn-primary" th:href="@{/trademarks/new}">+ 상표 등록</a>
+    </div>
+
+    <form class="row g-2 mb-4" th:action="@{/trademarks}" method="get">
+        <div class="col-md-6">
+            <input type="text" name="keyword" class="form-control" placeholder="상표명, 출원인, 출원번호"
+                   th:value="${keyword}">
+        </div>
+        <div class="col-auto"><button class="btn btn-outline-secondary">검색</button></div>
+    </form>
+
+    <div th:if="${result.content().isEmpty()}" class="alert alert-light">등록된 상표가 없습니다.</div>
+
+    <div class="row row-cols-2 row-cols-md-4 row-cols-lg-6 g-3">
+        <div class="col" th:each="t : ${result.content()}">
+            <a class="card h-100 text-decoration-none text-dark" th:href="@{/trademarks/{id}(id=${t.id})}">
+                <img class="thumb" th:src="@{'/uploads/' + ${t.imagePath}}" th:alt="${t.name}">
+                <div class="card-body p-2">
+                    <div class="fw-semibold text-truncate" th:text="${t.name}">상표명</div>
+                    <div class="small text-muted text-truncate" th:text="${t.applicationNo}">40-2026-0000001</div>
+                    <span th:unless="${t.hasVector()}" class="badge bg-warning text-dark">벡터 없음</span>
+                </div>
+            </a>
+        </div>
+    </div>
+
+    <div class="mt-4" th:replace="~{fragments :: pagination(${result}, '/trademarks')}"></div>
+</main>
+<footer th:replace="~{fragments :: footer}"></footer>
+</body>
+</html>

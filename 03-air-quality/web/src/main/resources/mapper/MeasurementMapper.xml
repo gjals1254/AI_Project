@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.air.repository.mybatis.MeasurementMapper">
+
+    <select id="findById" resultType="Measurement">
+        SELECT * FROM measurement WHERE id = #{id}
+    </select>
+
+    <select id="findByStationAndDate" resultType="Measurement">
+        SELECT * FROM measurement WHERE station_id = #{stationId} AND measure_date = #{date}
+    </select>
+
+    <select id="findRecent" resultType="Measurement">
+        SELECT * FROM measurement
+        WHERE station_id = #{stationId}
+        ORDER BY measure_date DESC
+        LIMIT #{limit}
+    </select>
+
+    <select id="findPage" resultType="Measurement">
+        SELECT * FROM measurement
+        <where>
+            <if test="stationId != null">station_id = #{stationId}</if>
+        </where>
+        ORDER BY measure_date DESC, id DESC
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <select id="count" resultType="long">
+        SELECT COUNT(*) FROM measurement
+        <where>
+            <if test="stationId != null">station_id = #{stationId}</if>
+        </where>
+    </select>
+
+    <insert id="insert" parameterType="Measurement" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO measurement (station_id, measure_date, pm10, pm25, o3, no2, co, so2,
+                                 temperature, humidity, wind_speed, precipitation, created_at)
+        VALUES (#{stationId}, #{measureDate}, #{pm10}, #{pm25}, #{o3}, #{no2}, #{co}, #{so2},
+                #{temperature}, #{humidity}, #{windSpeed}, #{precipitation}, #{createdAt})
+    </insert>
+
+    <update id="update" parameterType="Measurement">
+        UPDATE measurement
+        SET pm10 = #{pm10}, pm25 = #{pm25}, o3 = #{o3}, no2 = #{no2}, co = #{co}, so2 = #{so2},
+            temperature = #{temperature}, humidity = #{humidity}, wind_speed = #{windSpeed},
+            precipitation = #{precipitation}
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM measurement WHERE id = #{id}
+    </delete>
+</mapper>

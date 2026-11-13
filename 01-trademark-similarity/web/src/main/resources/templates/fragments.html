@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
+<head th:fragment="head(title)">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="dark">
+    <title th:text="${title} + ' | Marksight 상표 유사도'">Marksight</title>
+    <!-- 부트스트랩 다크 컴포넌트를 쓰고, 색·면은 app.css 의 토큰으로 덮는다 -->
+    <script>document.documentElement.setAttribute('data-bs-theme', 'dark');</script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Noto+Sans+KR:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+
+<body>
+<!-- 셸: 왼쪽 사이드바 + 상단 바 (Ruled T-frame). 각 페이지의 <main> 은 body 여백으로 캔버스에 놓인다 -->
+<nav th:fragment="nav" class="shell" aria-label="주 메뉴">
+    <aside class="shell-side" id="shell-side">
+        <a class="brand" th:href="@{/}" aria-label="Marksight 홈">
+            <svg class="brand-mark" viewBox="0 0 28 28" aria-hidden="true">
+                <rect x="1" y="1" width="26" height="26" rx="8" fill="none" stroke="currentColor" stroke-width="2"/>
+                <circle cx="11" cy="14" r="5" fill="none" stroke="currentColor" stroke-width="2"/>
+                <circle cx="17" cy="14" r="5" fill="var(--accent)"/>
+            </svg>
+            <span>Marksight</span>
+        </a>
+        <div class="side-group">검색</div>
+        <a class="side-link" th:href="@{/search}" data-match="/search">
+            <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
+            유사 상표 검색</a>
+        <a class="side-link" th:href="@{/trademarks}" data-match="/trademarks" data-exclude="/trademarks/new">
+            <svg viewBox="0 0 20 20" aria-hidden="true"><rect x="3" y="3" width="6" height="6" rx="1.5"/><rect x="11" y="3" width="6" height="6" rx="1.5"/><rect x="3" y="11" width="6" height="6" rx="1.5"/><rect x="11" y="11" width="6" height="6" rx="1.5"/></svg>
+            등록 상표</a>
+        <a class="side-link" sec:authorize="isAuthenticated()" th:href="@{/trademarks/new}" data-match="/trademarks/new">
+            <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 4v12M4 10h12"/></svg>
+            상표 등록</a>
+        <th:block sec:authorize="hasRole('ADMIN')">
+            <div class="side-group">관리</div>
+            <a class="side-link" th:href="@{/admin}" data-match="/admin" data-exact="true">
+                <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 16V9M8 16V4M13 16v-5M18 16H2"/></svg>
+                대시보드</a>
+            <a class="side-link" th:href="@{/admin/trademarks}" data-match="/admin/trademarks">
+                <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 5h12M4 10h12M4 15h8"/></svg>
+                벡터 관리</a>
+            <a class="side-link" th:href="@{/admin/history}" data-match="/admin/history">
+                <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7"/><path d="M10 6v4l3 2"/></svg>
+                검색 이력</a>
+        </th:block>
+        <div class="side-foot">
+            <span sec:authorize="isAuthenticated()" class="who">
+                <span class="avatar" aria-hidden="true" th:text="${#strings.toUpperCase(#strings.substring(#authentication.name, 0, 1))}">U</span>
+                <span sec:authentication="name">user</span>
+            </span>
+            <form sec:authorize="isAuthenticated()" th:action="@{/logout}" method="post" class="m-0">
+                <button class="side-link as-button">로그아웃</button>
+            </form>
+            <a sec:authorize="!isAuthenticated()" class="side-link" th:href="@{/login}">로그인</a>
+        </div>
+    </aside>
+    <header class="shell-top">
+        <button class="menu-toggle" type="button" aria-controls="shell-side" aria-expanded="false" aria-label="메뉴 열기">
+            <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 6h14M3 10h14M3 14h14"/></svg>
+        </button>
+        <form class="top-search" th:action="@{/trademarks}" method="get" role="search">
+            <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
+            <input name="keyword" type="search" placeholder="상표명·출원인·출원번호로 찾기" aria-label="등록 상표 찾기">
+        </form>
+        <a class="btn-invert" th:href="@{/search}">이미지로 검색</a>
+    </header>
+    <script>
+        (function () {
+            var path = location.pathname;
+            document.querySelectorAll('.side-link[data-match]').forEach(function (a) {
+                var m = a.dataset.match, hit = a.dataset.exact ? path === m || path === m + '/'
+                    : path.indexOf(m) === 0 && !(a.dataset.exclude && path.indexOf(a.dataset.exclude) === 0);
+                if (hit) { a.classList.add('active'); a.setAttribute('aria-current', 'page'); }
+            });
+            var btn = document.querySelector('.menu-toggle'), side = document.getElementById('shell-side');
+            btn.addEventListener('click', function () {
+                var open = side.classList.toggle('open');
+                btn.setAttribute('aria-expanded', open);
+            });
+        })();
+    </script>
+</nav>
+
+<div th:fragment="alerts">
+    <div th:if="${message}" class="alert alert-success" th:text="${message}"></div>
+    <div th:if="${warning}" class="alert alert-warning" th:text="${warning}"></div>
+</div>
+
+<!-- <nav> 가 아닌 <div>: ~{fragments :: nav} 선택자가 <nav> 요소까지 매칭하기 때문 -->
+<div th:fragment="pagination(result, url)" th:if="${result.totalPages() > 1}" role="navigation">
+    <ul class="pagination justify-content-center">
+        <li class="page-item" th:classappend="${!result.hasPrev()} ? 'disabled'">
+            <a class="page-link" th:href="@{${url}(page=${result.page() - 1}, keyword=${keyword})}">이전</a>
+        </li>
+        <li class="page-item" th:each="i : ${#numbers.sequence(0, result.totalPages() - 1)}"
+            th:classappend="${i == result.page()} ? 'active'">
+            <a class="page-link" th:href="@{${url}(page=${i}, keyword=${keyword})}" th:text="${i + 1}">1</a>
+        </li>
+        <li class="page-item" th:classappend="${!result.hasNext()} ? 'disabled'">
+            <a class="page-link" th:href="@{${url}(page=${result.page() + 1}, keyword=${keyword})}">다음</a>
+        </li>
+    </ul>
+</div>
+
+<footer th:fragment="footer" class="shell-foot">
+    Marksight · 상표 이미지 특징 벡터와 코사인 유사도로 비슷한 등록 상표를 찾습니다
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</footer>
+</body>
+</html>

@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('관리자')}"></head>
+<body>
+<nav th:replace="~{fragments :: nav}"></nav>
+<main class="container">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1 class="mb-0">관리자 대시보드</h1>
+        <div class="btn-group">
+            <a class="btn btn-outline-dark" th:href="@{/admin/trademarks}">상표 데이터 관리</a>
+            <a class="btn btn-outline-dark" th:href="@{/admin/history}">검색 이력</a>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-3"><div class="card p-3"><div class="text-muted">등록 상표</div>
+            <div class="stat" th:text="${trademarkCount}">0</div></div></div>
+        <div class="col-md-3"><div class="card p-3"><div class="text-muted">벡터 없는 상표</div>
+            <div class="stat" th:classappend="${missingVectorCount > 0} ? 'text-warning'"
+                 th:text="${missingVectorCount}">0</div></div></div>
+        <div class="col-md-3"><div class="card p-3"><div class="text-muted">오늘 검색</div>
+            <div class="stat" th:text="${todaySearchCount}">0</div></div></div>
+        <div class="col-md-3"><div class="card p-3"><div class="text-muted">누적 검색</div>
+            <div class="stat" th:text="${searchCount}">0</div></div></div>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-md-5">
+            <div class="card p-3">
+                <h6>시스템 상태</h6>
+                <table class="table table-sm mb-0">
+                    <tr><th>AI 서버</th>
+                        <td><span class="badge" th:classappend="${ai['status'] == 'UP'} ? 'bg-success' : 'bg-danger'"
+                                  th:text="${ai['status']}"></span></td></tr>
+                    <tr><th>모델</th><td th:text="${ai['model']} ?: '-'"></td></tr>
+                    <tr><th>벡터 차원</th><td th:text="${ai['dim']} ?: '-'"></td></tr>
+                    <tr><th>영속 계층</th><td class="text-uppercase" th:text="${persistence}"></td></tr>
+                </table>
+            </div>
+        </div>
+        <div class="col-md-7">
+            <div class="card p-3">
+                <h6>최근 검색</h6>
+                <table class="table table-sm align-middle mb-0">
+                    <tr th:each="h : ${recent}">
+                        <td><img class="thumb-sm" th:src="@{'/uploads/' + ${h.queryImagePath}}" alt=""></td>
+                        <td th:text="${#temporals.format(h.searchedAt, 'MM-dd HH:mm')}"></td>
+                        <td th:text="${h.topScore != null} ? |최고 ${#numbers.formatDecimal(h.topScore * 100, 1, 1)}%| : '-'"></td>
+                        <td><a th:href="@{/admin/history/{id}(id=${h.id})}">보기</a></td>
+                    </tr>
+                    <tr th:if="${recent.isEmpty()}"><td class="text-muted">검색 이력이 없습니다.</td></tr>
+                </table>
+            </div>
+        </div>
+    </div>
+</main>
+<footer th:replace="~{fragments :: footer}"></footer>
+</body>
+</html>

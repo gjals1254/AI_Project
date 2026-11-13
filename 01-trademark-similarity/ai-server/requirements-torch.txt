@@ -1,0 +1,4 @@
+# ResNet50 딥러닝 추출기를 쓰려면 추가로 설치 (CPU 버전 예시)
+# pip install -r requirements-torch.txt --index-url https://download.pytorch.org/whl/cpu
+torch>=2.2
+torchvision>=0.17

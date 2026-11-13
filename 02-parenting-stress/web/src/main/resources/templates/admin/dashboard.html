@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('관리자')}"></head>
+<body>
+<nav th:replace="~{fragments :: nav}"></nav>
+<main class="container">
+    <div th:replace="~{fragments :: alerts}"></div>
+    <h1 class="mb-3">관리자 대시보드</h1>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-3"><div class="card p-3"><div class="text-muted">누적 평가</div>
+            <div class="stat" th:text="${total}">0</div></div></div>
+        <div class="col-md-3"><div class="card p-3"><div class="text-muted">오늘 평가</div>
+            <div class="stat" th:text="${today}">0</div></div></div>
+        <div class="col-md-3"><div class="card p-3"><div class="text-muted">고위험</div>
+            <div class="stat text-danger" th:text="${distribution['고위험']}">0</div></div></div>
+        <div class="col-md-3"><div class="card p-3"><div class="text-muted">평균 위험점수</div>
+            <div class="stat" th:text="${avgRisk != null} ? ${#numbers.formatDecimal(avgRisk, 1, 1)} : '-'">0</div></div></div>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-md-4">
+            <div class="card p-3 h-100">
+                <h6>수준별 분포</h6>
+                <canvas id="distChart"></canvas>
+            </div>
+        </div>
+        <div class="col-md-8">
+            <div class="card p-3 h-100">
+                <h6>모델 변수 중요도 (전역)</h6>
+                <canvas id="impChart" height="180"></canvas>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card p-3">
+                <h6>모델 정보</h6>
+                <table class="table table-sm mb-0">
+                    <tr><th>AI 서버</th><td><span class="badge" th:classappend="${ai['status'] == 'UP'} ? 'bg-success' : 'bg-danger'"
+                                              th:text="${ai['status']}"></span></td></tr>
+                    <tr><th>버전</th><td th:text="${modelInfo['version']}"></td></tr>
+                    <tr><th>알고리즘</th><td th:text="${modelInfo['algorithm']}"></td></tr>
+                    <tr><th>학습 데이터</th><td th:text="|${modelInfo['dataSource']} (${modelInfo['samples']}건)|"></td></tr>
+                    <tr><th>정확도 / F1(macro)</th><td th:text="|${modelInfo['accuracy']} / ${modelInfo['f1Macro']}|"></td></tr>
+                    <tr><th>학습일시</th><td th:text="${modelInfo['trainedAt']}"></td></tr>
+                    <tr><th>영속 계층</th><td class="text-uppercase" th:text="${persistence}"></td></tr>
+                </table>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card p-3">
+                <h6>모델 재학습</h6>
+                <p class="small text-muted">AI 서버의 <code>data/parenting_stress.csv</code> 로 다시 학습합니다. 다른 CSV 는 AI 서버에서
+                    <code>python train.py --csv data.csv</code> 를 실행한 뒤 AI 서버를 재시작하세요.</p>
+                <form th:action="@{/admin/retrain}" method="post" class="row g-2"
+                      onsubmit="return confirm('모델을 재학습합니다. 계속할까요?')">
+                    <div class="col-auto"><button class="btn btn-warning">재학습</button></div>
+                </form>
+            </div>
+        </div>
+    </div>
+</main>
+<footer th:replace="~{fragments :: footer}"></footer>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script th:inline="javascript">
+    // 한 가지 색(청록)의 단계 + 고위험만 경고색, 격자는 옅게
+    Chart.defaults.font.family = '"IBM Plex Sans KR", system-ui, sans-serif';
+    Chart.defaults.color = '#5b5f5d';
+    Chart.defaults.borderColor = '#eff1f0';
+    const LEVEL = ['#8cbcc8', '#1b6c80', '#c4242a'];
+    const dist = /*[[${distribution}]]*/ {};
+    new Chart(document.getElementById('distChart'), {
+        type: 'doughnut',
+        data: { labels: Object.keys(dist),
+                datasets: [{ data: Object.values(dist), backgroundColor: LEVEL, borderWidth: 2, borderColor: '#fff' }] },
+        options: { cutout: '78%', plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, boxHeight: 10 } } } }
+    });
+    const imp = /*[[${modelInfo['featureImportances']}]]*/ [];
+    if (imp) {
+        new Chart(document.getElementById('impChart'), {
+            type: 'bar',
+            data: { labels: imp.map(i => i.label), datasets: [{ data: imp.map(i => i.importance), backgroundColor: '#1b6c80', maxBarThickness: 16 }] },
+            options: { indexAxis: 'y', plugins: { legend: { display: false } },
+                       scales: { x: { border: { display: false } }, y: { grid: { display: false } } } }
+        });
+    }
+</script>
+</body>
+</html>

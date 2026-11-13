@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.stress.repository.mybatis.AssessmentMapper">
+
+    <sql id="searchCondition">
+        <where>
+            <if test="keyword != null and keyword != ''">
+                AND respondent_code LIKE CONCAT('%', #{keyword}, '%')
+            </if>
+            <if test="level != null">
+                AND stress_level = #{level}
+            </if>
+        </where>
+    </sql>
+
+    <select id="findById" resultType="Assessment">
+        SELECT * FROM assessment WHERE id = #{id}
+    </select>
+
+    <select id="findPage" resultType="Assessment">
+        SELECT * FROM assessment
+        <include refid="searchCondition"/>
+        ORDER BY id DESC
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <select id="count" resultType="long">
+        SELECT COUNT(*) FROM assessment
+        <include refid="searchCondition"/>
+    </select>
+
+    <select id="findByRespondentCode" resultType="Assessment">
+        SELECT * FROM assessment WHERE respondent_code = #{respondentCode} ORDER BY created_at
+    </select>
+
+    <!-- 집계 결과를 DTO 로 매핑 (컬럼 별칭 = 프로퍼티명) -->
+    <select id="countByLevel" resultType="LevelCount">
+        SELECT stress_level AS level, COUNT(*) AS count
+        FROM assessment
+        WHERE stress_level IS NOT NULL
+        GROUP BY stress_level
+        ORDER BY stress_level
+    </select>
+
+    <select id="averageRiskScore" resultType="double">
+        SELECT AVG(risk_score) FROM assessment
+    </select>
+
+    <select id="countSince" resultType="long">
+        SELECT COUNT(*) FROM assessment WHERE created_at &gt;= #{from}
+    </select>
+
+    <insert id="insert" parameterType="Assessment" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO assessment (
+            respondent_code, parent_age, child_count, youngest_child_age, sleep_hours, weekly_work_hours, parenting_efficacy, social_support, family_environment, resilience, quality_of_life,
+            stress_level, stress_label, risk_score, prob_normal, prob_caution, prob_high, top_factors,
+            model_version, memo, created_by, created_at
+        ) VALUES (
+            #{respondentCode}, #{parentAge}, #{childCount}, #{youngestChildAge}, #{sleepHours}, #{weeklyWorkHours}, #{parentingEfficacy}, #{socialSupport}, #{familyEnvironment}, #{resilience}, #{qualityOfLife},
+            #{stressLevel}, #{stressLabel}, #{riskScore}, #{probNormal}, #{probCaution}, #{probHigh}, #{topFactors},
+            #{modelVersion}, #{memo}, #{createdBy}, #{createdAt}
+        )
+    </insert>
+
+    <!-- 재예측 시 결과 컬럼만 갱신 -->
+    <update id="update" parameterType="Assessment">
+        UPDATE assessment
+        SET stress_level  = #{stressLevel},
+            stress_label  = #{stressLabel},
+            risk_score    = #{riskScore},
+            prob_normal   = #{probNormal},
+            prob_caution  = #{probCaution},
+            prob_high     = #{probHigh},
+            top_factors   = #{topFactors},
+            model_version = #{modelVersion},
+            memo          = #{memo}
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM assessment WHERE id = #{id}
+    </delete>
+</mapper>

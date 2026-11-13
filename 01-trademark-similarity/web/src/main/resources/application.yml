@@ -1,0 +1,46 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: trademark-web
+  profiles:
+    # jpa 또는 mybatis 중 하나를 선택 (실행 시 --spring.profiles.active=mybatis 로 변경 가능)
+    active: jpa
+  datasource:
+    url: jdbc:mysql://localhost:3306/trademark_db?serverTimezone=Asia/Seoul&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true
+    username: aiuser
+    password: aipass1234
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  sql:
+    init:
+      mode: always            # 시작 시 schema.sql 실행 (CREATE TABLE IF NOT EXISTS)
+      encoding: UTF-8
+      continue-on-error: false
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 12MB
+  thymeleaf:
+    cache: false
+
+app:
+  upload-dir: ./uploads
+  ai:
+    base-url: http://localhost:8001
+    connect-timeout-ms: 3000
+    read-timeout-ms: 60000
+  search:
+    top-k: 10                 # 기본 추천 개수
+    min-score: 0.0            # 이 값 미만은 결과에서 제외
+    high-threshold: 0.85      # 유사도 '높음' 기준
+    medium-threshold: 0.70    # 유사도 '보통' 기준
+  security:
+    admin-username: admin
+    admin-password: admin1234
+    user-username: user
+    user-password: user1234
+
+logging:
+  level:
+    com.example.trademark: DEBUG

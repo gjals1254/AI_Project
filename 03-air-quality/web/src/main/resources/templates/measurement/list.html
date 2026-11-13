@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{fragments :: head('측정 데이터')}"></head>
+<body>
+<nav th:replace="~{fragments :: nav}"></nav>
+<main class="container">
+    <div th:replace="~{fragments :: alerts}"></div>
+    <h1 class="mb-3">측정 데이터 <small class="text-muted fs-6" th:text="|총 ${result.total()}건|"></small></h1>
+
+    <form class="row g-2 mb-3" th:action="@{/measurements}" method="get">
+        <div class="col-md-4">
+            <select name="stationId" class="form-select">
+                <option value="">전체 측정소</option>
+                <option th:each="s : ${stations}" th:value="${s.id}" th:text="${s.name}"
+                        th:selected="${s.id == stationId}"></option>
+            </select>
+        </div>
+        <div class="col-auto"><button class="btn btn-outline-secondary">조회</button></div>
+    </form>
+
+    <table class="table table-hover bg-white align-middle small">
+        <thead><tr><th>측정일</th><th>측정소</th><th>PM10</th><th>PM2.5</th><th>O₃</th><th>NO₂</th><th>CO</th><th>SO₂</th>
+            <th>기온</th><th>습도</th><th>풍속</th><th>강수</th><th>당일 등급</th><th></th></tr></thead>
+        <tbody>
+        <tr th:each="m : ${result.content()}">
+            <td th:text="${m.measureDate}"></td>
+            <td><a th:href="@{/stations/{id}(id=${m.stationId})}" th:text="|#${m.stationId}|"></a></td>
+            <td th:text="${m.pm10}"></td><td th:text="${m.pm25}"></td>
+            <td th:text="${m.o3}"></td><td th:text="${m.no2}"></td><td th:text="${m.co}"></td><td th:text="${m.so2}"></td>
+            <td th:text="${m.temperature}"></td><td th:text="${m.humidity}"></td>
+            <td th:text="${m.windSpeed}"></td><td th:text="${m.precipitation}"></td>
+            <td><span th:replace="~{fragments :: badge(${m.color()}, ${m.gradeLabel()})}"></span></td>
+            <td>
+                <form sec:authorize="hasRole('ADMIN')" th:action="@{/measurements/{id}/delete(id=${m.id})}" method="post"
+                      class="m-0" onsubmit="return confirm('삭제하시겠습니까? 관련 예측도 삭제됩니다.')">
+                    <button class="btn btn-link btn-sm text-danger p-0">삭제</button>
+                </form>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+    <div th:replace="~{fragments :: pagination(${result}, '/measurements')}"></div>
+</main>
+<footer th:replace="~{fragments :: footer}"></footer>
+</body>
+</html>

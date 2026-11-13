@@ -1,0 +1,20 @@
+# 로컬 오버라이드 예시 — 이 파일을 같은 폴더의 application.yml 로 복사해서 쓴다 (application.yml 은 git 에서 제외됨)
+# web 폴더에서 실행하면 Spring Boot 가 config/application.yml 을 자동으로 읽는다.
+
+# 로컬 DB 가 MariaDB 인 경우: MySQL 드라이버가 MariaDB 에 없는 INFORMATION_SCHEMA.KEYWORDS.RESERVED 를
+# 조회하다 실패하므로 방언을 직접 지정하고 JDBC 메타데이터 조회를 끈다. MySQL(Docker)이면 이 블록은 필요 없다.
+spring:
+  jpa:
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MariaDBDialect
+        boot:
+          allow_jdbc_metadata_access: false
+
+# 공공데이터포털 인증키(에어코리아 대기오염정보 + 기상청 ASOS 일자료, "일반 인증키(Decoding)")
+# app.sync.source 를 publicdata 로 바꾸면 이 키로 실측값을 수집한다. 기본 openmeteo 는 키가 필요 없다.
+app:
+  openapi:
+    service-key: ""
+  # sync:
+  #   source: publicdata

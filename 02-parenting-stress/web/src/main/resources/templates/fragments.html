@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
+<head th:fragment="head(title)">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title th:text="${title} + ' | 다온 양육스트레스 선별'">다온</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+
+<body>
+<!-- 셸: 옅은 세이지 L-프레임(사이드바 + 48px 상단 바) 위에 흰 시트(main) -->
+<nav th:fragment="nav" class="frame" aria-label="주 메뉴">
+    <aside class="frame-side" id="frame-side">
+        <a class="brand" th:href="@{/}" aria-label="다온 홈">
+            <svg class="brand-mark" viewBox="0 0 28 28" aria-hidden="true">
+                <circle cx="14" cy="14" r="12" fill="none" stroke="currentColor" stroke-width="2"/>
+                <path d="M7 17c2.5 3 11.5 3 14 0" fill="none" stroke="var(--accent)" stroke-width="2.4" stroke-linecap="round"/>
+                <circle cx="10" cy="11" r="1.6" fill="currentColor"/><circle cx="18" cy="11" r="1.6" fill="currentColor"/>
+            </svg>
+            <span>다온<small>양육스트레스 선별</small></span>
+        </a>
+        <th:block sec:authorize="isAuthenticated()">
+            <div class="side-group">상담</div>
+            <a class="side-link" th:href="@{/}" data-match="/" data-exact="true">
+                <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 9l7-6 7 6v8H3z"/></svg>개요</a>
+            <a class="side-link" th:href="@{/assessments/new}" data-match="/assessments/new">
+                <svg viewBox="0 0 20 20" aria-hidden="true"><rect x="4" y="3" width="12" height="14" rx="2"/><path d="M7 7h6M7 10h6M7 13h3"/></svg>새 설문</a>
+            <a class="side-link" th:href="@{/assessments}" data-match="/assessments" data-exclude="/assessments/new">
+                <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 5h12M4 10h12M4 15h12"/></svg>평가 이력</a>
+        </th:block>
+        <th:block sec:authorize="hasRole('ADMIN')">
+            <div class="side-group">관리</div>
+            <a class="side-link" th:href="@{/admin}" data-match="/admin">
+                <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 16V9M8 16V4M13 16v-5M18 16H2"/></svg>모델·통계</a>
+        </th:block>
+        <div class="side-foot">
+            <span sec:authorize="isAuthenticated()" class="who">
+                <span class="avatar" aria-hidden="true" th:text="${#strings.toUpperCase(#strings.substring(#authentication.name, 0, 1))}">C</span>
+                <span sec:authentication="name">counselor</span>
+            </span>
+            <form sec:authorize="isAuthenticated()" th:action="@{/logout}" method="post" class="m-0">
+                <button class="side-link as-button">로그아웃</button>
+            </form>
+        </div>
+    </aside>
+    <header class="frame-top">
+        <button class="menu-toggle" type="button" aria-controls="frame-side" aria-expanded="false" aria-label="메뉴 열기">
+            <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 6h14M3 10h14M3 14h14"/></svg>
+        </button>
+        <form class="top-search" sec:authorize="isAuthenticated()" th:action="@{/assessments}" method="get" role="search">
+            <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="9" cy="9" r="5.5"/><path d="M13 13l4 4"/></svg>
+            <input name="keyword" type="search" placeholder="대상자 코드로 찾기" aria-label="대상자 코드로 평가 찾기">
+        </form>
+        <span class="top-note" sec:authorize="!isAuthenticated()">상담 기관용 · 로그인 후 이용</span>
+        <a class="btn btn-primary btn-sm top-action" sec:authorize="isAuthenticated()" th:href="@{/assessments/new}">새 설문</a>
+        <a class="btn btn-primary btn-sm top-action" sec:authorize="!isAuthenticated()" th:href="@{/login}">로그인</a>
+    </header>
+    <script>
+        (function () {
+            var path = location.pathname;
+            document.querySelectorAll('.side-link[data-match]').forEach(function (a) {
+                var m = a.dataset.match, hit = a.dataset.exact ? path === m
+                    : path.indexOf(m) === 0 && !(a.dataset.exclude && path.indexOf(a.dataset.exclude) === 0);
+                if (hit) { a.classList.add('active'); a.setAttribute('aria-current', 'page'); }
+            });
+            var btn = document.querySelector('.menu-toggle'), side = document.getElementById('frame-side');
+            btn.addEventListener('click', function () { btn.setAttribute('aria-expanded', side.classList.toggle('open')); });
+        })();
+    </script>
+</nav>
+
+<div th:fragment="alerts">
+    <div th:if="${message}" class="alert alert-success" th:text="${message}"></div>
+    <div th:if="${warning}" class="alert alert-warning" th:text="${warning}"></div>
+</div>
+
+<!-- <nav> 가 아닌 <div>: ~{fragments :: nav} 선택자가 <nav> 요소까지 매칭하기 때문 -->
+<div th:fragment="pagination(result, url)" th:if="${result.totalPages() > 1}" role="navigation">
+    <ul class="pagination justify-content-center">
+        <li class="page-item" th:classappend="${!result.hasPrev()} ? 'disabled'">
+            <a class="page-link" th:href="@{${url}(page=${result.page() - 1}, keyword=${keyword}, level=${level})}">이전</a>
+        </li>
+        <li class="page-item" th:each="i : ${#numbers.sequence(0, result.totalPages() - 1)}"
+            th:classappend="${i == result.page()} ? 'active'">
+            <a class="page-link" th:href="@{${url}(page=${i}, keyword=${keyword}, level=${level})}" th:text="${i + 1}">1</a>
+        </li>
+        <li class="page-item" th:classappend="${!result.hasNext()} ? 'disabled'">
+            <a class="page-link" th:href="@{${url}(page=${result.page() + 1}, keyword=${keyword}, level=${level})}">다음</a>
+        </li>
+    </ul>
+</div>
+
+<footer th:fragment="footer" class="frame-foot">
+    본 시스템의 예측 결과는 의학적 진단이 아닌 선별(screening) 참고 자료입니다.
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</footer>
+</body>
+</html>

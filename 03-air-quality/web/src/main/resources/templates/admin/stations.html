@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('측정소 관리')}"></head>
+<body>
+<nav th:replace="~{fragments :: nav}"></nav>
+<main class="container">
+    <div th:replace="~{fragments :: alerts}"></div>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1 class="mb-0">측정소 관리</h1>
+        <a class="btn btn-primary" th:href="@{/admin/stations/new}">+ 측정소 등록</a>
+    </div>
+    <table class="table table-hover bg-white align-middle">
+        <thead><tr><th>ID</th><th>측정소명</th><th>시도</th><th>주소</th><th>위도/경도</th><th>운영</th><th></th></tr></thead>
+        <tbody>
+        <tr th:each="s : ${stations}">
+            <td th:text="${s.id}"></td>
+            <td><a th:href="@{/stations/{id}(id=${s.id})}" th:text="${s.name}"></a></td>
+            <td th:text="${s.region}"></td>
+            <td th:text="${s.address}"></td>
+            <td class="small" th:text="${s.latitude != null} ? |${s.latitude}, ${s.longitude}| : '-'"></td>
+            <td><span class="badge" th:classappend="${s.active} ? 'bg-success' : 'bg-secondary'"
+                      th:text="${s.active} ? '운영' : '중지'"></span></td>
+            <td class="text-nowrap">
+                <a class="btn btn-sm btn-outline-primary" th:href="@{/admin/stations/{id}/edit(id=${s.id})}">수정</a>
+                <form class="d-inline" th:action="@{/admin/stations/{id}/delete(id=${s.id})}" method="post"
+                      onsubmit="return confirm('측정소의 모든 측정·예측 데이터도 삭제됩니다. 계속할까요?')">
+                    <button class="btn btn-sm btn-outline-danger">삭제</button>
+                </form>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+</main>
+<footer th:replace="~{fragments :: footer}"></footer>
+</body>
+</html>

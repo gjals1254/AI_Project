@@ -1,0 +1,24 @@
+# MySQL 8 개발용 DB (3개 프로젝트 공용)
+#   실행:  docker compose up -d
+#   중지:  docker compose down        (데이터는 볼륨에 유지)
+#   초기화: docker compose down -v   (데이터까지 삭제)
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: ai-projects-mysql
+    restart: unless-stopped
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: root1234
+      TZ: Asia/Seoul
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --default-time-zone=+09:00
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+
+volumes:
+  mysql-data:

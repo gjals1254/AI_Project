@@ -1,0 +1,29 @@
+# Java / Maven
+target/
+*.class
+.idea/
+*.iml
+.vscode/
+uploads/
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+**/ai-server/model/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# 로컬 전용 설정 (인증키·로컬 DB 설정) — 예시는 config/application.example.yml
+**/web/config/application.yml
+
+# 데이터 파일 (직접 받은 원본·학습용 CSV는 저장소에 넣지 않는다)
+**/ai-server/data/
+
+# 작업 도구 산출물
+.taste-skill/
+.superpowers/
+.claude/

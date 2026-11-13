@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('오류')}"></head>
+<body>
+<nav th:replace="~{fragments :: nav}"></nav>
+<main class="container"><div class="narrow" style="max-width: 640px">
+    <div class="card p-5 text-center">
+        <h1 class="err-code" th:text="${status}">500</h1>
+        <p class="lead mt-3" th:text="${message} ?: '요청을 처리하는 중 오류가 발생했습니다.'">오류</p>
+        <a class="btn btn-outline-primary mt-2" th:href="@{/}">홈으로</a>
+    </div>
+</div></main>
+<footer th:replace="~{fragments :: footer}"></footer>
+</body>
+</html>

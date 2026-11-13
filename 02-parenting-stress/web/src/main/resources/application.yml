@@ -1,0 +1,34 @@
+server:
+  port: 8082
+
+spring:
+  application:
+    name: stress-web
+  profiles:
+    active: jpa            # jpa | mybatis
+  datasource:
+    url: jdbc:mysql://localhost:3306/stress_db?serverTimezone=Asia/Seoul&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true
+    username: aiuser
+    password: aipass1234
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  sql:
+    init:
+      mode: always
+      encoding: UTF-8
+  thymeleaf:
+    cache: false
+
+app:
+  ai:
+    base-url: http://localhost:8002
+    connect-timeout-ms: 3000
+    read-timeout-ms: 30000
+  security:
+    admin-username: admin
+    admin-password: admin1234
+    user-username: counselor
+    user-password: counselor1234
+
+logging:
+  level:
+    com.example.stress: DEBUG

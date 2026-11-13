@@ -1,0 +1,31 @@
+-- 양육 스트레스 예측 시스템 스키마 (MySQL 8)
+
+CREATE TABLE IF NOT EXISTS assessment (
+    id                  BIGINT        NOT NULL AUTO_INCREMENT COMMENT '평가 ID',
+    respondent_code     VARCHAR(50)   NOT NULL COMMENT '대상자 코드(가명)',
+    parent_age          INT           NOT NULL COMMENT '부모 나이',
+    child_count         INT           NOT NULL COMMENT '자녀 수',
+    youngest_child_age  INT           NOT NULL COMMENT '막내 자녀 나이',
+    sleep_hours         DOUBLE        NOT NULL COMMENT '하루 수면시간',
+    weekly_work_hours   DOUBLE        NOT NULL COMMENT '주당 근로시간',
+    parenting_efficacy  INT           NOT NULL COMMENT '양육 효능감(0~100)',
+    social_support      INT           NOT NULL COMMENT '사회적 지지(0~100)',
+    family_environment  INT           NOT NULL COMMENT '가족 환경(0~100)',
+    resilience          INT           NOT NULL COMMENT '회복탄력성(0~100)',
+    quality_of_life     INT           NOT NULL COMMENT '삶의 질(0~100)',
+    stress_level        INT           NULL     COMMENT '예측 수준 0 정상 1 주의 2 고위험',
+    stress_label        VARCHAR(10)   NULL     COMMENT '예측 수준명',
+    risk_score          DOUBLE        NULL     COMMENT '위험점수 0~100',
+    prob_normal         DOUBLE        NULL     COMMENT 'P(정상)',
+    prob_caution        DOUBLE        NULL     COMMENT 'P(주의)',
+    prob_high           DOUBLE        NULL     COMMENT 'P(고위험)',
+    top_factors         TEXT          NULL     COMMENT '주요 영향 요인(JSON)',
+    model_version       VARCHAR(50)   NULL     COMMENT '예측 모델 버전',
+    memo                VARCHAR(500)  NULL     COMMENT '상담 메모',
+    created_by          VARCHAR(50)   NULL     COMMENT '등록자',
+    created_at          DATETIME      NOT NULL COMMENT '등록일시',
+    PRIMARY KEY (id),
+    KEY idx_assessment_level (stress_level),
+    KEY idx_assessment_respondent (respondent_code),
+    KEY idx_assessment_created (created_at)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '스트레스 평가';

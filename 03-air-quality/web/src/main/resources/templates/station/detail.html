@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{fragments :: head(${station.name})}"></head>
+<body>
+<nav th:replace="~{fragments :: nav}"></nav>
+<main class="container">
+    <div th:replace="~{fragments :: alerts}"></div>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1 class="mb-0"><span th:text="${station.name}"></span>
+            <small class="text-muted fs-6" th:text="|${station.region} · ${station.address ?: ''}|"></small></h1>
+        <a sec:authorize="hasAnyRole('OPERATOR','ADMIN')" class="btn btn-primary"
+           th:href="@{/measurements/new(stationId=${station.id})}">+ 측정 등록</a>
+    </div>
+
+    <div class="row g-3 mb-3">
+        <div class="col-md-4">
+            <div class="card p-4 h-100 text-center">
+                <div class="text-muted">내일 예보</div>
+                <th:block th:if="${forecast != null}">
+                    <div class="forecast-grade my-2"
+                         th:style="|color:${forecast.color()}|"
+                         th:text="${forecast.gradeLabel}"></div>
+                    <div th:text="${forecast.targetDate}"></div>
+                    <div class="d-flex justify-content-center gap-3 mt-2">
+                        <div>PM10<br><b th:text="${#numbers.formatDecimal(forecast.predPm10, 1, 1)}"></b>
+                            <span th:replace="~{fragments :: badge(${forecast.pm10Color()}, ${forecast.pm10Label()})}"></span></div>
+                        <div>PM2.5<br><b th:text="${#numbers.formatDecimal(forecast.predPm25, 1, 1)}"></b>
+                            <span th:replace="~{fragments :: badge(${forecast.pm25Color()}, ${forecast.pm25Label()})}"></span></div>
+                    </div>
+                    <div class="alert alert-light small mt-3 mb-0" th:text="${advice}"></div>
+                </th:block>
+                <div th:if="${forecast == null}" class="text-muted my-4">예측 데이터가 없습니다.</div>
+            </div>
+        </div>
+        <div class="col-md-8">
+            <div class="card p-3 h-100">
+                <div class="d-flex justify-content-between">
+                    <span class="text-muted">실측 vs 예측 추이 (㎍/㎥)</span>
+                    <div class="btn-group btn-group-sm">
+                        <a class="btn btn-outline-secondary" th:classappend="${days == 14} ? 'active'"
+                           th:href="@{/stations/{id}(id=${station.id}, days=14)}">14일</a>
+                        <a class="btn btn-outline-secondary" th:classappend="${days == 30} ? 'active'"
+                           th:href="@{/stations/{id}(id=${station.id}, days=30)}">30일</a>
+                        <a class="btn btn-outline-secondary" th:classappend="${days == 90} ? 'active'"
+                           th:href="@{/stations/{id}(id=${station.id}, days=90)}">90일</a>
+                    </div>
+                </div>
+                <canvas id="trendChart" height="130"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-md-5">
+            <div class="card p-3 h-100">
+                <h6>내일 PM2.5 에 영향을 준 요인</h6>
+                <canvas id="factorChart" th:if="${!factors.isEmpty()}"></canvas>
+                <p class="text-muted small" th:if="${factors.isEmpty()}">두드러진 요인이 없습니다.</p>
+                <p class="small text-muted mb-0">막대 = 해당 값을 평년 중앙값으로 바꿨을 때 변하는 예측 PM2.5 (+는 농도를 높인 요인)</p>
+            </div>
+        </div>
+        <div class="col-md-7">
+            <div class="card p-3 h-100">
+                <h6>최근 측정</h6>
+                <table class="table table-sm align-middle mb-0">
+                    <thead><tr><th>측정일</th><th>PM10</th><th>PM2.5</th><th>풍속</th><th>강수</th><th>등급</th><th></th></tr></thead>
+                    <tr th:each="m : ${recent}">
+                        <td th:text="${m.measureDate}"></td>
+                        <td th:text="${m.pm10}"></td>
+                        <td th:text="${m.pm25}"></td>
+                        <td th:text="${m.windSpeed}"></td>
+                        <td th:text="${m.precipitation}"></td>
+                        <td><span th:replace="~{fragments :: badge(${m.color()}, ${m.gradeLabel()})}"></span></td>
+                        <td>
+                            <form sec:authorize="hasAnyRole('OPERATOR','ADMIN')"
+                                  th:action="@{/measurements/{id}/repredict(id=${m.id})}" method="post" class="m-0">
+                                <button class="btn btn-link btn-sm p-0">재예측</button>
+                            </form>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+</main>
+<footer th:replace="~{fragments :: footer}"></footer>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script th:inline="javascript">
+    // 무채색 선 + 예측은 점선, 등급 색은 등급에만. 격자 4~5줄, 직선.
+    Chart.defaults.font.family = '"Public Sans", "Gothic A1", system-ui, sans-serif';
+    Chart.defaults.font.size = 12;
+    Chart.defaults.color = '#8a8c92';
+    Chart.defaults.borderColor = '#222224';
+    const chart = /*[[${chart}]]*/ {};
+    new Chart(document.getElementById('trendChart'), {
+        type: 'line',
+        data: {
+            labels: chart.labels,
+            datasets: [
+                { label: 'PM2.5 실측', data: chart.actualPm25, borderColor: '#f2f2f3', backgroundColor: '#f2f2f3', borderWidth: 2, pointRadius: 0, spanGaps: true, tension: 0 },
+                { label: 'PM2.5 예측', data: chart.predictedPm25, borderColor: '#4a8ad6', backgroundColor: '#4a8ad6', borderWidth: 2, borderDash: [5, 4], pointRadius: 0, spanGaps: true, tension: 0 },
+                { label: 'PM10 실측', data: chart.actualPm10, borderColor: '#a3a5ab', backgroundColor: '#a3a5ab', borderWidth: 1.5, pointRadius: 0, spanGaps: true, tension: 0, hidden: true },
+                { label: 'PM10 예측', data: chart.predictedPm10, borderColor: '#6f7f99', backgroundColor: '#6f7f99', borderWidth: 1.5, borderDash: [5, 4], pointRadius: 0, spanGaps: true, tension: 0, hidden: true }
+            ]
+        },
+        options: {
+            interaction: { mode: 'index', intersect: false },
+            plugins: { legend: { align: 'start', labels: { boxWidth: 14, boxHeight: 2 } } },
+            scales: { y: { beginAtZero: true, border: { display: false }, ticks: { maxTicksLimit: 5 } }, x: { grid: { display: false }, ticks: { maxTicksLimit: 8, maxRotation: 0 } } }
+        }
+    });
+
+    const factors = /*[[${factors}]]*/ [];
+    if (factors.length) {
+        new Chart(document.getElementById('factorChart'), {
+            type: 'bar',
+            data: { labels: factors.map(f => f.label),
+                    datasets: [{ data: factors.map(f => f.impact),
+                                 backgroundColor: factors.map(f => f.impact > 0 ? '#f2f2f3' : '#55565c'), maxBarThickness: 14 }] },
+            options: { indexAxis: 'y', plugins: { legend: { display: false } },
+                       scales: { x: { border: { display: false } }, y: { grid: { display: false } } } }
+        });
+    }
+</script>
+</body>
+</html>

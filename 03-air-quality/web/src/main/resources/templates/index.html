@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ko">
+<head th:replace="~{fragments :: head('내일 예보')}"></head>
+<body>
+<nav th:replace="~{fragments :: nav}"></nav>
+<main class="container"
+      th:with="bad=${#lists.size(statuses.?[forecast() != null and forecast().grade >= 3])},
+               withFc=${#lists.size(statuses.?[forecast() != null])}">
+    <div th:replace="~{fragments :: alerts}"></div>
+    <div class="title-row">
+        <div>
+            <h1>내일 대기질 예보</h1>
+            <p th:if="${withFc > 0}"
+               th:text="${bad > 0} ? |측정소 ${withFc}곳 중 ${bad}곳이 내일 '나쁨' 이상으로 예측됩니다.| : |측정소 ${withFc}곳 모두 내일 '보통' 이하로 예측됩니다.|">요약</p>
+            <p th:if="${withFc == 0}">아직 예측이 없습니다. 측정값이 들어오면 다음날 등급을 예측합니다.</p>
+        </div>
+        <span class="stamp">AI 서버
+            <b th:text="${ai['status'] == 'UP'} ? '정상' : '응답 없음'"
+               th:classappend="${ai['status'] == 'UP'} ? 'text-success' : 'text-danger'">정상</b>
+            · 모델 <b th:text="${ai['model'] ?: '—'}">—</b></span>
+    </div>
+
+    <section class="board" aria-labelledby="h-board">
+        <h2 id="h-board" class="visually-hidden">측정소별 최근 14일 등급과 내일 예보</h2>
+        <div class="board-head" aria-hidden="true">
+            <span>측정소</span><span>최근 14일 실측 등급 → 내일</span><span class="text-end">내일 예보 (㎍/㎥)</span>
+        </div>
+        <a class="board-row" th:each="s : ${statuses}" th:href="@{/stations/{id}(id=${s.station().id})}"
+           th:with="strip=${strips[s.station().id]}">
+            <div>
+                <div class="st-name" th:text="${s.station().name}">중구</div>
+                <div class="st-sub" th:text="${s.latest() != null} ? |${s.station().region} · 최근 측정 ${s.latest().measureDate}| : ${s.station().region}">서울</div>
+            </div>
+            <div class="strip-wrap">
+                <div class="strip" role="img"
+                     th:attr="aria-label=|${s.station().name} 최근 14일 실측 등급(측정 ${#lists.size(strip.?[#this != null])}일)과 예보|">
+                    <th:block th:each="m, st : ${strip}">
+                        <i th:if="${m != null}" th:style="|--g:${m.color()}|"
+                           th:title="|${m.measureDate} ${m.gradeLabel()} · PM10 ${#numbers.formatDecimal(m.pm10, 1, 0)} · PM2.5 ${#numbers.formatDecimal(m.pm25, 1, 0)}|"></i>
+                        <i th:if="${m == null}" class="none" th:title="|${stripStart.plusDays(st.index)} 측정 없음|"></i>
+                    </th:block>
+                    <i class="fc" th:if="${s.forecast() != null}" th:style="|--g:${s.forecast().color()}|"
+                       th:title="|${s.forecast().targetDate} 예보 ${s.forecast().gradeLabel}|"></i>
+                    <i class="none" th:if="${s.forecast() == null}"></i>
+                </div>
+                <div class="strip-axis">
+                    <span th:text="${#temporals.format(stripStart, 'MM-dd')}">—</span>
+                    <span th:text="${s.forecast() != null} ? |${#temporals.format(s.forecast().targetDate, 'MM-dd')} 예보| : '예보 없음'">내일</span>
+                </div>
+            </div>
+            <div class="fc-cell">
+                <th:block th:if="${s.forecast() != null}">
+                    <div class="forecast-grade" th:style="|color:${s.forecast().color()}|" th:text="${s.forecast().gradeLabel}">보통</div>
+                    <div class="vals">PM10 <b th:text="${#numbers.formatDecimal(s.forecast().predPm10, 1, 0)}">0</b>
+                        · PM2.5 <b th:text="${#numbers.formatDecimal(s.forecast().predPm25, 1, 0)}">0</b></div>
+                </th:block>
+                <span class="st-sub" th:if="${s.forecast() == null}">측정 데이터 없음</span>
+            </div>
+        </a>
+        <p class="empty m-3" th:if="${statuses.isEmpty()}">운영 중인 측정소가 없습니다. 관리 화면에서 등록하세요.</p>
+    </section>
+    <div class="legend" aria-label="등급 범례">
+        <span><i style="--g: var(--g1)"></i>좋음</span>
+        <span><i style="--g: var(--g2)"></i>보통</span>
+        <span><i style="--g: var(--g3)"></i>나쁨</span>
+        <span><i style="--g: var(--g4)"></i>매우나쁨</span>
+        <span><i class="fc"></i>예측(테두리)</span>
+    </div>
+
+    <div class="side-grid">
+        <section class="panel" aria-labelledby="h-crit">
+            <h2 id="h-crit">등급 기준 (일평균 ㎍/㎥)</h2>
+            <dl class="kv">
+                <dt><span class="grade" style="--g: var(--g1)">좋음</span></dt><dd>PM10 0–30 · PM2.5 0–15</dd>
+                <dt><span class="grade" style="--g: var(--g2)">보통</span></dt><dd>31–80 · 16–35</dd>
+                <dt><span class="grade" style="--g: var(--g3)">나쁨</span></dt><dd>81–150 · 36–75</dd>
+                <dt><span class="grade" style="--g: var(--g4)">매우나쁨</span></dt><dd>151– · 76–</dd>
+            </dl>
+            <p class="text-muted mt-3 mb-0">통합 등급은 PM10과 PM2.5 중 나쁜 쪽을 따릅니다.</p>
+        </section>
+        <section class="panel" aria-labelledby="h-src">
+            <h2 id="h-src">데이터</h2>
+            <dl class="kv">
+                <dt>측정소</dt><dd th:text="|${#lists.size(statuses)}곳|">0곳</dd>
+                <dt>예보 있음</dt><dd th:text="|${withFc}곳|">0곳</dd>
+                <dt>자동 수집</dt><dd>매일 11:00 전날치</dd>
+                <dt>예측 방식</dt><dd>오늘 일평균 → 내일 일평균</dd>
+            </dl>
+        </section>
+    </div>
+</main>
+<footer th:replace="~{fragments :: footer}"></footer>
+</body>
+</html>
